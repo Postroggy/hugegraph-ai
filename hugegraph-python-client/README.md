@@ -21,8 +21,8 @@ uv pip install hugegraph-python # Note: may not the latest version, recommend to
 To install from the source, clone the repository and install the required dependencies:
 
 ```bash
-git clone https://github.com/apache/incubator-hugegraph-ai.git
-cd incubator-hugegraph-ai/hugegraph-python-client
+git clone https://github.com/apache/hugegraph-ai.git
+cd hugegraph-ai/hugegraph-python-client
 
 # Use uv sync to install dependencies (workspace member)
 uv sync  # Automatically creates .venv and installs dependencies
@@ -175,6 +175,12 @@ Other info is under 🚧 (Welcome to add more docs for it, users could refer [ja
 
 ## Contributing
 
+* Welcome to contribute to `hugegraph-python-client`. Please see the [Guidelines](https://hugegraph.apache.org/docs/contribution-guidelines/) for more information.
 * Code format: Please run `./style/code_format_and_analysis.sh` to format your code before submitting a PR.
 
 Thank you to all the people who already contributed to `hugegraph-python-client`!
+
+## Contact Us
+
+* [GitHub Issues](https://github.com/apache/hugegraph-ai/issues): Feedback on usage issues and functional requirements (quick response)
+* Feedback Email: [dev@hugegraph.apache.org](mailto:dev@hugegraph.apache.org) (subscriber only)

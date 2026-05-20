@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""HugeGraph authentication and authorization API client."""
 
 import json
 
@@ -23,13 +24,26 @@ from pyhugegraph.utils import huge_router as router
 
 
 class AuthManager(HugeParamsBase):
-    @router.http("GET", "auth/users")
+    """Manage HugeGraph authentication and authorization.
+
+    The previous absolute /auth/... paths return 404 on HugeGraph 1.7.0+
+    because the server's JAX-RS @Path annotations only mount these endpoints
+    under /graphspaces/{graphspace}/auth/.... This change aligns the client
+    with the server's actual @Path annotations:
+    - users, accesses, belongs, targets -> graphspace-scoped
+    - groups -> server-level /auth/groups (matches GroupAPI @Path)
+    """
+
+    # User endpoints - graphspace-scoped
+    @router.http("GET", "/graphspaces/{graphspace}/auth/users")
     def list_users(self, limit=None):
+        """List authentication users."""
         params = {"limit": limit} if limit is not None else {}
         return self._invoke_request(params=params)
 
-    @router.http("POST", "auth/users")
+    @router.http("POST", "/graphspaces/{graphspace}/auth/users")
     def create_user(self, user_name, user_password, user_phone=None, user_email=None) -> dict | None:
+        """Create an authentication user."""
         return self._invoke_request(
             data=json.dumps(
                 {
@@ -41,19 +55,21 @@ class AuthManager(HugeParamsBase):
             )
         )
 
-    @router.http("DELETE", "auth/users/{user_id}")
-    def delete_user(self, user_id) -> dict | None:  # pylint: disable=unused-argument
+    @router.http("DELETE", "/graphspaces/{graphspace}/auth/users/{user_id}")
+    def delete_user(self, user_id) -> dict | None:
+        """Delete an authentication user."""
         return self._invoke_request()
 
-    @router.http("PUT", "auth/users/{user_id}")
+    @router.http("PUT", "/graphspaces/{graphspace}/auth/users/{user_id}")
     def modify_user(
         self,
-        user_id,  # pylint: disable=unused-argument
+        user_id,
         user_name=None,
         user_password=None,
         user_phone=None,
         user_email=None,
     ) -> dict | None:
+        """Modify an authentication user."""
         return self._invoke_request(
             data=json.dumps(
                 {
@@ -65,40 +81,49 @@ class AuthManager(HugeParamsBase):
             )
         )
 
-    @router.http("GET", "auth/users/{user_id}")
-    def get_user(self, user_id) -> dict | None:  # pylint: disable=unused-argument
+    @router.http("GET", "/graphspaces/{graphspace}/auth/users/{user_id}")
+    def get_user(self, user_id) -> dict | None:
+        """Get an authentication user."""
         return self._invoke_request()
 
-    @router.http("GET", "auth/groups")
+    # Group endpoints - server-level (not graphspace-scoped per Java client pattern)
+    @router.http("GET", "/auth/groups")
     def list_groups(self, limit=None) -> dict | None:
+        """List authentication groups."""
         params = {"limit": limit} if limit is not None else {}
         return self._invoke_request(params=params)
 
-    @router.http("POST", "auth/groups")
+    @router.http("POST", "/auth/groups")
     def create_group(self, group_name, group_description=None) -> dict | None:
+        """Create an authentication group."""
         data = {"group_name": group_name, "group_description": group_description}
         return self._invoke_request(data=json.dumps(data))
 
-    @router.http("DELETE", "auth/groups/{group_id}")
-    def delete_group(self, group_id) -> dict | None:  # pylint: disable=unused-argument
+    @router.http("DELETE", "/auth/groups/{group_id}")
+    def delete_group(self, group_id) -> dict | None:
+        """Delete an authentication group."""
         return self._invoke_request()
 
-    @router.http("PUT", "auth/groups/{group_id}")
+    @router.http("PUT", "/auth/groups/{group_id}")
     def modify_group(
         self,
-        group_id,  # pylint: disable=unused-argument
+        group_id,
         group_name=None,
         group_description=None,
     ) -> dict | None:
+        """Modify an authentication group."""
         data = {"group_name": group_name, "group_description": group_description}
         return self._invoke_request(data=json.dumps(data))
 
-    @router.http("GET", "auth/groups/{group_id}")
-    def get_group(self, group_id) -> dict | None:  # pylint: disable=unused-argument
+    @router.http("GET", "/auth/groups/{group_id}")
+    def get_group(self, group_id) -> dict | None:
+        """Get an authentication group."""
         return self._invoke_request()
 
-    @router.http("POST", "auth/accesses")
+    # Access endpoints - graphspace-scoped
+    @router.http("POST", "/graphspaces/{graphspace}/auth/accesses")
     def grant_accesses(self, group_id, target_id, access_permission) -> dict | None:
+        """Grant access permissions to a group for a target."""
         return self._invoke_request(
             data=json.dumps(
                 {
@@ -109,26 +134,31 @@ class AuthManager(HugeParamsBase):
             )
         )
 
-    @router.http("DELETE", "auth/accesses/{access_id}")
-    def revoke_accesses(self, access_id) -> dict | None:  # pylint: disable=unused-argument
+    @router.http("DELETE", "/graphspaces/{graphspace}/auth/accesses/{access_id}")
+    def revoke_accesses(self, access_id) -> dict | None:
+        """Revoke an access permission."""
         return self._invoke_request()
 
-    @router.http("PUT", "auth/accesses/{access_id}")
-    def modify_accesses(self, access_id, access_description) -> dict | None:  # pylint: disable=unused-argument
-        # The permission of access can\'t be updated
+    @router.http("PUT", "/graphspaces/{graphspace}/auth/accesses/{access_id}")
+    def modify_accesses(self, access_id, access_description) -> dict | None:
+        """Modify an access permission description."""
         data = {"access_description": access_description}
         return self._invoke_request(data=json.dumps(data))
 
-    @router.http("GET", "auth/accesses/{access_id}")
-    def get_accesses(self, access_id) -> dict | None:  # pylint: disable=unused-argument
+    @router.http("GET", "/graphspaces/{graphspace}/auth/accesses/{access_id}")
+    def get_accesses(self, access_id) -> dict | None:
+        """Get an access permission."""
         return self._invoke_request()
 
-    @router.http("GET", "auth/accesses")
+    @router.http("GET", "/graphspaces/{graphspace}/auth/accesses")
     def list_accesses(self) -> dict | None:
+        """List access permissions."""
         return self._invoke_request()
 
-    @router.http("POST", "auth/targets")
+    # Target endpoints - graphspace-scoped
+    @router.http("POST", "/graphspaces/{graphspace}/auth/targets")
     def create_target(self, target_name, target_graph, target_url, target_resources) -> dict | None:
+        """Create an authorization target."""
         return self._invoke_request(
             data=json.dumps(
                 {
@@ -140,19 +170,21 @@ class AuthManager(HugeParamsBase):
             )
         )
 
-    @router.http("DELETE", "auth/targets/{target_id}")
-    def delete_target(self, target_id) -> None:  # pylint: disable=unused-argument
+    @router.http("DELETE", "/graphspaces/{graphspace}/auth/targets/{target_id}")
+    def delete_target(self, target_id) -> None:
+        """Delete an authorization target."""
         return self._invoke_request()
 
-    @router.http("PUT", "auth/targets/{target_id}")
+    @router.http("PUT", "/graphspaces/{graphspace}/auth/targets/{target_id}")
     def update_target(
         self,
-        target_id,  # pylint: disable=unused-argument
+        target_id,
         target_name,
         target_graph,
         target_url,
         target_resources,
     ) -> dict | None:
+        """Update an authorization target."""
         return self._invoke_request(
             data=json.dumps(
                 {
@@ -164,32 +196,40 @@ class AuthManager(HugeParamsBase):
             )
         )
 
-    @router.http("GET", "auth/targets/{target_id}")
-    def get_target(self, target_id, response=None) -> dict | None:  # pylint: disable=unused-argument
+    @router.http("GET", "/graphspaces/{graphspace}/auth/targets/{target_id}")
+    def get_target(self, target_id, response=None) -> dict | None:
+        """Get an authorization target."""
         return self._invoke_request()
 
-    @router.http("GET", "auth/targets")
+    @router.http("GET", "/graphspaces/{graphspace}/auth/targets")
     def list_targets(self) -> dict | None:
+        """List authorization targets."""
         return self._invoke_request()
 
-    @router.http("POST", "auth/belongs")
+    # Belong endpoints - graphspace-scoped
+    @router.http("POST", "/graphspaces/{graphspace}/auth/belongs")
     def create_belong(self, user_id, group_id) -> dict | None:
+        """Create a user-group belong relationship."""
         data = {"user": user_id, "group": group_id}
         return self._invoke_request(data=json.dumps(data))
 
-    @router.http("DELETE", "auth/belongs/{belong_id}")
-    def delete_belong(self, belong_id) -> None:  # pylint: disable=unused-argument
+    @router.http("DELETE", "/graphspaces/{graphspace}/auth/belongs/{belong_id}")
+    def delete_belong(self, belong_id) -> None:
+        """Delete a user-group belong relationship."""
         return self._invoke_request()
 
-    @router.http("PUT", "auth/belongs/{belong_id}")
-    def update_belong(self, belong_id, description) -> dict | None:  # pylint: disable=unused-argument
+    @router.http("PUT", "/graphspaces/{graphspace}/auth/belongs/{belong_id}")
+    def update_belong(self, belong_id, description) -> dict | None:
+        """Update a user-group belong relationship."""
         data = {"belong_description": description}
         return self._invoke_request(data=json.dumps(data))
 
-    @router.http("GET", "auth/belongs/{belong_id}")
-    def get_belong(self, belong_id) -> dict | None:  # pylint: disable=unused-argument
+    @router.http("GET", "/graphspaces/{graphspace}/auth/belongs/{belong_id}")
+    def get_belong(self, belong_id) -> dict | None:
+        """Get a user-group belong relationship."""
         return self._invoke_request()
 
-    @router.http("GET", "auth/belongs")
+    @router.http("GET", "/graphspaces/{graphspace}/auth/belongs")
     def list_belongs(self) -> dict | None:
+        """List user-group belong relationships."""
         return self._invoke_request()
