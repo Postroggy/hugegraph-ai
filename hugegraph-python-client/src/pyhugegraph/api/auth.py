@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""HugeGraph authentication and authorization API client."""
 
 import json
 
@@ -37,13 +36,11 @@ class AuthManager(HugeParamsBase):
     # User endpoints - graphspace-scoped
     @router.http("GET", "/graphspaces/{graphspace}/auth/users")
     def list_users(self, limit=None):
-        """List authentication users."""
         params = {"limit": limit} if limit is not None else {}
         return self._invoke_request(params=params)
 
     @router.http("POST", "/graphspaces/{graphspace}/auth/users")
     def create_user(self, user_name, user_password, user_phone=None, user_email=None) -> dict | None:
-        """Create an authentication user."""
         return self._invoke_request(
             data=json.dumps(
                 {
@@ -57,7 +54,6 @@ class AuthManager(HugeParamsBase):
 
     @router.http("DELETE", "/graphspaces/{graphspace}/auth/users/{user_id}")
     def delete_user(self, user_id) -> dict | None:
-        """Delete an authentication user."""
         return self._invoke_request()
 
     @router.http("PUT", "/graphspaces/{graphspace}/auth/users/{user_id}")
@@ -69,7 +65,6 @@ class AuthManager(HugeParamsBase):
         user_phone=None,
         user_email=None,
     ) -> dict | None:
-        """Modify an authentication user."""
         return self._invoke_request(
             data=json.dumps(
                 {
@@ -83,25 +78,21 @@ class AuthManager(HugeParamsBase):
 
     @router.http("GET", "/graphspaces/{graphspace}/auth/users/{user_id}")
     def get_user(self, user_id) -> dict | None:
-        """Get an authentication user."""
         return self._invoke_request()
 
     # Group endpoints - server-level (not graphspace-scoped per Java client pattern)
     @router.http("GET", "/auth/groups")
     def list_groups(self, limit=None) -> dict | None:
-        """List authentication groups."""
         params = {"limit": limit} if limit is not None else {}
         return self._invoke_request(params=params)
 
     @router.http("POST", "/auth/groups")
     def create_group(self, group_name, group_description=None) -> dict | None:
-        """Create an authentication group."""
         data = {"group_name": group_name, "group_description": group_description}
         return self._invoke_request(data=json.dumps(data))
 
     @router.http("DELETE", "/auth/groups/{group_id}")
     def delete_group(self, group_id) -> dict | None:
-        """Delete an authentication group."""
         return self._invoke_request()
 
     @router.http("PUT", "/auth/groups/{group_id}")
@@ -111,19 +102,16 @@ class AuthManager(HugeParamsBase):
         group_name=None,
         group_description=None,
     ) -> dict | None:
-        """Modify an authentication group."""
         data = {"group_name": group_name, "group_description": group_description}
         return self._invoke_request(data=json.dumps(data))
 
     @router.http("GET", "/auth/groups/{group_id}")
     def get_group(self, group_id) -> dict | None:
-        """Get an authentication group."""
         return self._invoke_request()
 
     # Access endpoints - graphspace-scoped
     @router.http("POST", "/graphspaces/{graphspace}/auth/accesses")
     def grant_accesses(self, group_id, target_id, access_permission) -> dict | None:
-        """Grant access permissions to a group for a target."""
         return self._invoke_request(
             data=json.dumps(
                 {
@@ -136,29 +124,24 @@ class AuthManager(HugeParamsBase):
 
     @router.http("DELETE", "/graphspaces/{graphspace}/auth/accesses/{access_id}")
     def revoke_accesses(self, access_id) -> dict | None:
-        """Revoke an access permission."""
         return self._invoke_request()
 
     @router.http("PUT", "/graphspaces/{graphspace}/auth/accesses/{access_id}")
     def modify_accesses(self, access_id, access_description) -> dict | None:
-        """Modify an access permission description."""
         data = {"access_description": access_description}
         return self._invoke_request(data=json.dumps(data))
 
     @router.http("GET", "/graphspaces/{graphspace}/auth/accesses/{access_id}")
     def get_accesses(self, access_id) -> dict | None:
-        """Get an access permission."""
         return self._invoke_request()
 
     @router.http("GET", "/graphspaces/{graphspace}/auth/accesses")
     def list_accesses(self) -> dict | None:
-        """List access permissions."""
         return self._invoke_request()
 
     # Target endpoints - graphspace-scoped
     @router.http("POST", "/graphspaces/{graphspace}/auth/targets")
     def create_target(self, target_name, target_graph, target_url, target_resources) -> dict | None:
-        """Create an authorization target."""
         return self._invoke_request(
             data=json.dumps(
                 {
@@ -172,7 +155,6 @@ class AuthManager(HugeParamsBase):
 
     @router.http("DELETE", "/graphspaces/{graphspace}/auth/targets/{target_id}")
     def delete_target(self, target_id) -> None:
-        """Delete an authorization target."""
         return self._invoke_request()
 
     @router.http("PUT", "/graphspaces/{graphspace}/auth/targets/{target_id}")
@@ -184,7 +166,6 @@ class AuthManager(HugeParamsBase):
         target_url,
         target_resources,
     ) -> dict | None:
-        """Update an authorization target."""
         return self._invoke_request(
             data=json.dumps(
                 {
@@ -198,38 +179,31 @@ class AuthManager(HugeParamsBase):
 
     @router.http("GET", "/graphspaces/{graphspace}/auth/targets/{target_id}")
     def get_target(self, target_id, response=None) -> dict | None:
-        """Get an authorization target."""
         return self._invoke_request()
 
     @router.http("GET", "/graphspaces/{graphspace}/auth/targets")
     def list_targets(self) -> dict | None:
-        """List authorization targets."""
         return self._invoke_request()
 
     # Belong endpoints - graphspace-scoped
     @router.http("POST", "/graphspaces/{graphspace}/auth/belongs")
     def create_belong(self, user_id, group_id) -> dict | None:
-        """Create a user-group belong relationship."""
         data = {"user": user_id, "group": group_id}
         return self._invoke_request(data=json.dumps(data))
 
     @router.http("DELETE", "/graphspaces/{graphspace}/auth/belongs/{belong_id}")
     def delete_belong(self, belong_id) -> None:
-        """Delete a user-group belong relationship."""
         return self._invoke_request()
 
     @router.http("PUT", "/graphspaces/{graphspace}/auth/belongs/{belong_id}")
     def update_belong(self, belong_id, description) -> dict | None:
-        """Update a user-group belong relationship."""
         data = {"belong_description": description}
         return self._invoke_request(data=json.dumps(data))
 
     @router.http("GET", "/graphspaces/{graphspace}/auth/belongs/{belong_id}")
     def get_belong(self, belong_id) -> dict | None:
-        """Get a user-group belong relationship."""
         return self._invoke_request()
 
     @router.http("GET", "/graphspaces/{graphspace}/auth/belongs")
     def list_belongs(self) -> dict | None:
-        """List user-group belong relationships."""
         return self._invoke_request()
