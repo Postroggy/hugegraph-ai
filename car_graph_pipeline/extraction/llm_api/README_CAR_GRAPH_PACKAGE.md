@@ -3,7 +3,7 @@
 本目录是原 `/Users/lzj/proj/car_graph/llm_api_task` 的包内复制版，用来在
 `new_hugegraph_ai/ico/hugegraph-ai/car_graph_pipeline` 下独立保存 car-graph
 的 LLM API 抽取方案。当前它不依赖 `hugegraph_llm`，后续可以再由
-HugeGraph AI 的服务层或 Flow adapter 调用。
+HugeGraph AI 的服务层或 Flow 适配层调用。
 
 ## 是否完整
 
@@ -144,10 +144,10 @@ output/doc_raw_results/<doc_run_id>.json
 ## 与 HugeGraph AI 的边界
 
 当前这个包是 car-graph 的独立抽取策略包，不直接调用 HugeGraph AI 内部类。
-后续接入时建议新增薄 adapter：
+后续接入时建议新增薄适配层：
 
 1. HugeGraph AI API/Flow 接收请求；
-2. adapter 调用本包抽取；
+2. 适配层调用本包抽取；
 3. 本包输出 raw `entities/relations`；
 4. convert/normalizer 转成 HugeGraph 可导入格式；
 5. 由 HugeGraph AI 或导入脚本负责写图。

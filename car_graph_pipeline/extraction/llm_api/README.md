@@ -48,7 +48,7 @@ export CAR_GRAPH_CHUNK_TARGET_CHARS=2000
 export CAR_GRAPH_CHUNK_MAX_CHARS=2800
 ```
 
-LLM key 不写在代码里，由 `car_graph_pipeline.config` 从环境变量或本地
+LLM 密钥不写在代码里，由 `car_graph_pipeline.config` 从环境变量或本地
 `.env` 读取。推荐在 `new_hugegraph_ai/ico/hugegraph-ai/.env` 中放：
 
 ```text

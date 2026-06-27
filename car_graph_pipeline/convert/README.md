@@ -1,11 +1,10 @@
-# Convert
+# 格式转换
 
-This module converts car-graph raw extraction results into HugeGraph-friendly
-vertex and edge files.
+本模块把 car-graph 的 raw 抽取结果转换为更适合 HugeGraph 导入的顶点和边文件。
 
-## Why This Exists
+## 为什么单独放转换层
 
-The extraction workflows output raw graph facts:
+抽取流程输出的是 raw 图谱事实：
 
 ```json
 {
@@ -14,20 +13,18 @@ The extraction workflows output raw graph facts:
 }
 ```
 
-HugeGraph import expects vertices and edges with labels, ids, endpoints, and
-properties. Conversion is kept as a separate adapter so extraction quality logic
-does not mix with graph storage serialization.
+HugeGraph 导入需要带 label、id、端点和 properties 的 vertex/edge 结构。
+转换逻辑单独放在这里，可以避免把抽取质量控制和图存储序列化混在一起。
 
-## Files
+## 文件
 
-- `to_hugegraph_v2.py`: vehicle-scoped converter for the newer schema where
-  labels and relations carry `vehicle_model`.
-- `to_hugegraph.py`: older converter without vehicle scope, kept for reference.
+- `to_hugegraph_v2.py`：较新的车型作用域转换器，适配点边带
+  `vehicle_model` 的 schema。
+- `to_hugegraph.py`：旧版无车型作用域转换器，保留作参考。
 
-## Notes
+## 注意
 
-The copied converters still contain paths and assumptions from the original
-`/Users/lzj/proj/car_graph/car_graph_pipeline` workspace. Before using this
-module as a production CLI under HugeGraph AI, parameterize input/output paths
-and align the converter with the final chosen vehicle-scope schema.
+这些转换脚本仍保留了原 `/Users/lzj/proj/car_graph/car_graph_pipeline`
+工作区中的部分路径和假设。将它们作为 HugeGraph AI 下的生产 CLI 使用前，
+需要先参数化输入/输出路径，并与最终采用的车型作用域 schema 对齐。
 

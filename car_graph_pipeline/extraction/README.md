@@ -1,15 +1,14 @@
-# Extraction
+# 抽取模块
 
-This directory stores two independent car manual graph extraction strategies.
+本目录保存两套相互独立的汽车手册图谱抽取方案。
 
-## Modules
+## 模块
 
-- `llm_api/`: API-driven extraction with LLM review/repair and resumable
-  chunk-level artifacts.
-- `codex_agent/`: prompt and helper-code assets for Codex-agent based manual
-  extraction.
+- `llm_api/`：基于 LLM API 的抽取方案，包含 LLM review/repair 和可续跑的
+  chunk 级中间产物设计。
+- `codex_agent/`：基于 Codex-agent 的抽取方案，保存 prompt 和辅助脚本。
 
-Both strategies produce raw car-graph results in the same conceptual shape:
+两套方案的 raw 输出在概念上保持一致：
 
 ```json
 {
@@ -18,6 +17,6 @@ Both strategies produce raw car-graph results in the same conceptual shape:
 }
 ```
 
-The raw shape is deliberately separate from HugeGraph storage format. Use
-`../convert` when vertex/edge import files are needed.
+raw 结果刻意与 HugeGraph 存储格式分离。需要生成可入库的顶点/边文件时，
+使用 `../convert`。
 

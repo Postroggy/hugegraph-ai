@@ -1,15 +1,14 @@
-# LLM API Source Documents
+# LLM API 原始文档目录
 
-This directory is intentionally kept empty in git except for this README.
+本目录在 git 中只保留这个 README。
 
-The copied source markdown manuals were removed from this package copy before
-commit. The original source documents still live under:
+复制到本包中的原始 markdown 手册已在提交前清理。原始文档仍保存在：
 
 ```text
 /Users/lzj/proj/car_graph/llm_api_task/md_output
 ```
 
-To run extraction from this HugeGraph AI checkout, copy or symlink the needed
-markdown manuals into this directory, or adjust `DOC_DIR` in the extraction
-script if you want to read from another local path.
+如果要在当前 HugeGraph AI checkout 中运行抽取，可以把需要处理的 markdown
+手册复制或软链接到本目录；如果希望读取其他本地路径，也可以调整抽取脚本中的
+`DOC_DIR`。
 
