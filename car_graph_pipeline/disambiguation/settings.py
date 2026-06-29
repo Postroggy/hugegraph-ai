@@ -3,21 +3,34 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, MutableMapping
 
 from car_graph_pipeline.config import (
     EMBEDDING_MAX_CHARS as BASE_EMBEDDING_MAX_CHARS,
+)
+from car_graph_pipeline.config import (
     EMBEDDING_MODEL as BASE_EMBEDDING_MODEL,
+)
+from car_graph_pipeline.config import (
     EMBEDDING_TIMEOUT as BASE_EMBEDDING_TIMEOUT,
+)
+from car_graph_pipeline.config import (
     EMBEDDING_URL as BASE_EMBEDDING_URL,
+)
+from car_graph_pipeline.config import (
     LLM_BASE_URL as BASE_LLM_BASE_URL,
+)
+from car_graph_pipeline.config import (
     LLM_DISAMBIGUATE_MODEL,
+)
+from car_graph_pipeline.config import (
     LLM_MAX_TOKENS as BASE_LLM_MAX_TOKENS,
+)
+from car_graph_pipeline.config import (
     LLM_TIMEOUT as BASE_LLM_TIMEOUT,
 )
-
 
 SETTINGS_DIR = Path(__file__).resolve().parent
 PACKAGE_ROOT = SETTINGS_DIR.parent
@@ -223,11 +236,15 @@ def load_settings(
         input_version=str(paths.get("input_version", defaults.input_version)),
         output_version=str(paths.get("output_version", defaults.output_version)),
         cosine_similarity_threshold=float(thresholds.get("cosine_similarity", defaults.cosine_similarity_threshold)),
-        edit_distance_ratio_threshold=float(thresholds.get("edit_distance_ratio", defaults.edit_distance_ratio_threshold)),
+        edit_distance_ratio_threshold=float(
+            thresholds.get("edit_distance_ratio", defaults.edit_distance_ratio_threshold)
+        ),
         llm_batch_size=int(thresholds.get("llm_batch_size", defaults.llm_batch_size)),
         skip_types=_as_str_set(thresholds.get("skip_types", list(defaults.skip_types))),
         max_entity_reduction_pct=float(validation.get("max_entity_reduction_pct", defaults.max_entity_reduction_pct)),
-        max_relation_reduction_pct=float(validation.get("max_relation_reduction_pct", defaults.max_relation_reduction_pct)),
+        max_relation_reduction_pct=float(
+            validation.get("max_relation_reduction_pct", defaults.max_relation_reduction_pct)
+        ),
         embedding_url=str(embedding.get("url", defaults.embedding_url)),
         embedding_model=str(embedding.get("model", defaults.embedding_model)),
         embedding_dim=int(embedding.get("dim", defaults.embedding_dim)),
@@ -249,12 +266,28 @@ def load_settings(
     return DisambiguationSettings(
         input_version=env_values.get("CAR_GRAPH_DISAMBIGUATION_INPUT_VERSION", cfg.input_version),
         output_version=env_values.get("CAR_GRAPH_DISAMBIGUATION_OUTPUT_VERSION", cfg.output_version),
-        cosine_similarity_threshold=_env_float(env_values, "CAR_GRAPH_DISAMBIGUATION_COSINE_THRESHOLD", cfg.cosine_similarity_threshold),
-        edit_distance_ratio_threshold=_env_float(env_values, "CAR_GRAPH_DISAMBIGUATION_EDIT_THRESHOLD", cfg.edit_distance_ratio_threshold),
+        cosine_similarity_threshold=_env_float(
+            env_values,
+            "CAR_GRAPH_DISAMBIGUATION_COSINE_THRESHOLD",
+            cfg.cosine_similarity_threshold,
+        ),
+        edit_distance_ratio_threshold=_env_float(
+            env_values,
+            "CAR_GRAPH_DISAMBIGUATION_EDIT_THRESHOLD",
+            cfg.edit_distance_ratio_threshold,
+        ),
         llm_batch_size=_env_int(env_values, "CAR_GRAPH_DISAMBIGUATION_LLM_BATCH_SIZE", cfg.llm_batch_size),
         skip_types=_as_str_set(env_values.get("CAR_GRAPH_DISAMBIGUATION_SKIP_TYPES", ",".join(sorted(cfg.skip_types)))),
-        max_entity_reduction_pct=_env_float(env_values, "CAR_GRAPH_DISAMBIGUATION_MAX_ENTITY_REDUCTION_PCT", cfg.max_entity_reduction_pct),
-        max_relation_reduction_pct=_env_float(env_values, "CAR_GRAPH_DISAMBIGUATION_MAX_RELATION_REDUCTION_PCT", cfg.max_relation_reduction_pct),
+        max_entity_reduction_pct=_env_float(
+            env_values,
+            "CAR_GRAPH_DISAMBIGUATION_MAX_ENTITY_REDUCTION_PCT",
+            cfg.max_entity_reduction_pct,
+        ),
+        max_relation_reduction_pct=_env_float(
+            env_values,
+            "CAR_GRAPH_DISAMBIGUATION_MAX_RELATION_REDUCTION_PCT",
+            cfg.max_relation_reduction_pct,
+        ),
         embedding_url=env_values.get("CAR_GRAPH_EMBEDDING_URL", cfg.embedding_url),
         embedding_model=env_values.get("CAR_GRAPH_EMBEDDING_MODEL", cfg.embedding_model),
         embedding_dim=_env_int(env_values, "CAR_GRAPH_EMBEDDING_DIM", cfg.embedding_dim),

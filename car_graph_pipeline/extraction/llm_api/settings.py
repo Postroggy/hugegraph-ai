@@ -12,10 +12,9 @@ local `.env`.
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Mapping, MutableMapping
-
 
 SETTINGS_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = SETTINGS_DIR / "config.yaml"
@@ -258,4 +257,3 @@ MAX_CONTEXT_CHARS = SETTINGS.max_context_chars
 SMALL_CHUNK_TARGET = SETTINGS.small_chunk_target
 SMALL_CHUNK_MAX = SETTINGS.small_chunk_max
 SMALL_CHUNK_MIN = SETTINGS.small_chunk_min
-

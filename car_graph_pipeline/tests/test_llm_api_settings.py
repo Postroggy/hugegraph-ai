@@ -5,7 +5,6 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1].parent
 sys.path.insert(0, str(REPO_ROOT))
 
@@ -63,4 +62,3 @@ class LlmApiSettingsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -1,1 +1,1 @@
-"""Phase: 格式转换（entities/relations → HugeGraph vertices/edges）。"""
+"""Phase: 格式转换 (entities/relations → HugeGraph vertices/edges)."""

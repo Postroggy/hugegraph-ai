@@ -4,7 +4,6 @@ import copy
 import json
 import logging
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple
 
 from .settings import DisambiguationContext, make_context
 
@@ -15,8 +14,8 @@ class UnionFind:
     """Union-Find 用于处理传递性合并。"""
 
     def __init__(self):
-        self.parent: Dict[str, str] = {}
-        self.winner: Dict[str, str] = {}  # root -> winner_id
+        self.parent: dict[str, str] = {}
+        self.winner: dict[str, str] = {}  # root -> winner_id
 
     def find(self, x: str) -> str:
         if x not in self.parent:
@@ -38,7 +37,7 @@ class UnionFind:
 
 
 def merge_entity(winner: dict, loser: dict, strategy: str = "union") -> dict:
-    """合并两个实体的属性，返回合并后的实体。"""
+    """合并两个实体的属性, 返回合并后的实体。"""
     merged = copy.deepcopy(winner)
     winner_props = merged.get("properties", {})
     loser_props = loser.get("properties", {})
@@ -51,7 +50,7 @@ def merge_entity(winner: dict, loser: dict, strategy: str = "union") -> dict:
                 winner_props[key] = value
             elif isinstance(value, list) and isinstance(winner_props[key], list):
                 # 列表取并集
-                existing = set(json.dumps(x, ensure_ascii=False) for x in winner_props[key])
+                existing = {json.dumps(x, ensure_ascii=False) for x in winner_props[key]}
                 for item in value:
                     if json.dumps(item, ensure_ascii=False) not in existing:
                         winner_props[key].append(item)
@@ -67,11 +66,11 @@ def merge_entity(winner: dict, loser: dict, strategy: str = "union") -> dict:
 
 
 def execute_merge(
-    decisions: List[dict],
+    decisions: list[dict],
     ctx: DisambiguationContext | None = None,
-) -> Tuple[List[dict], List[dict], dict]:
+) -> tuple[list[dict], list[dict], dict]:
     """
-    执行合并：
+    执行合并:
     1. 构建 Union-Find 处理传递性
     2. 合并实体属性
     3. 迁移边 + 去重 + 自环检测
@@ -81,9 +80,9 @@ def execute_merge(
     context = ctx or make_context()
     context.output_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Phase 3: 加载数据...")
-    with open(context.input_entities_path, "r", encoding="utf-8") as f:
+    with open(context.input_entities_path, encoding="utf-8") as f:
         entities = json.load(f)
-    with open(context.input_relations_path, "r", encoding="utf-8") as f:
+    with open(context.input_relations_path, encoding="utf-8") as f:
         relations = json.load(f)
 
     entity_map = {e["entity_id"]: e for e in entities}
@@ -137,15 +136,15 @@ def execute_merge(
 
     # 计算最终合并映射: loser_id -> winner_id
     # 找出所有被涉及的实体
-    involved_ids: Set[str] = set()
+    involved_ids: set[str] = set()
     for dec in merge_decisions:
         involved_ids.add(dec["entity_a_id"])
         involved_ids.add(dec["entity_b_id"])
 
     # 对于每个涉及的 ID，找到其最终 winner
-    id_remap: Dict[str, str] = {}  # old_id -> final_winner_id
-    losers: Set[str] = set()
-    winner_groups: Dict[str, List[str]] = defaultdict(list)  # winner -> [losers]
+    id_remap: dict[str, str] = {}  # old_id -> final_winner_id
+    losers: set[str] = set()
+    winner_groups: dict[str, list[str]] = defaultdict(list)  # winner -> [losers]
 
     for eid in involved_ids:
         final_winner = uf.get_winner(eid)
@@ -158,7 +157,7 @@ def execute_merge(
 
     # Phase 3.2: 合并实体属性
     # 找到每个决策对应的 strategy
-    strategy_map: Dict[Tuple[str, str], str] = {}
+    strategy_map: dict[tuple[str, str], str] = {}
     for dec in merge_decisions:
         key = (dec["entity_a_id"], dec["entity_b_id"])
         strategy_map[key] = dec.get("property_merge", "union")
@@ -183,7 +182,7 @@ def execute_merge(
 
     # Phase 3.4: 边迁移 + 去重 + 自环检测
     merged_relations = []
-    seen_edges: Set[Tuple[str, str, str]] = set()
+    seen_edges: set[tuple[str, str, str]] = set()
     self_loops_removed = 0
     edges_remapped = 0
 
@@ -255,10 +254,9 @@ if __name__ == "__main__":
     context = make_context()
     dec_path = context.decisions_path
     if not dec_path.exists():
-        print("请先运行 Phase 2 生成 merge_decisions.json")
-        exit(1)
-    with open(dec_path, "r", encoding="utf-8") as f:
+        raise SystemExit("请先运行 Phase 2 生成 merge_decisions.json")
+    with open(dec_path, encoding="utf-8") as f:
         decisions = json.load(f)
-    print(f"加载 {len(decisions)} 个决策")
+    logger.info("加载 %s 个决策", len(decisions))
     entities, relations, log = execute_merge(decisions, context)
-    print(f"\n完成: {log['entities_after']} 实体, {log['relations_after']} 关系")
+    logger.info("完成: %s 实体, %s 关系", log["entities_after"], log["relations_after"])

@@ -4,14 +4,14 @@ import asyncio
 import json
 import logging
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from .settings import DisambiguationContext, make_context
 
 logger = logging.getLogger(__name__)
 
 
-def get_model_from_id(entity_id: str, etype: str) -> Optional[str]:
+def get_model_from_id(entity_id: str, etype: str) -> str | None:
     """从 entity_id 提取车型名。"""
     parts = entity_id.split("::")
     if etype in ("VehicleBrand", "VehicleModel"):
@@ -21,8 +21,8 @@ def get_model_from_id(entity_id: str, etype: str) -> Optional[str]:
     return None
 
 
-def get_vehicle_model(entity: dict) -> Optional[str]:
-    """优先从属性读取车型，兼容旧版 entity_id 编码。"""
+def get_vehicle_model(entity: dict) -> str | None:
+    """优先从属性读取车型, 兼容旧版 entity_id 编码。"""
     props = entity.get("properties", {})
     model = props.get("vehicle_model") or entity.get("vehicle_model")
     if isinstance(model, str) and model.strip():
@@ -63,19 +63,19 @@ def build_embed_text(entity: dict) -> str:
 
 
 async def batch_embed(
-    texts: List[str],
-    session: aiohttp.ClientSession,
+    texts: list[str],
+    session: Any,
     semaphore: asyncio.Semaphore,
     ctx: DisambiguationContext,
 ) -> list[Any]:
-    """批量获取 embedding，支持并发控制和指数退避重试。"""
+    """批量获取 embedding, 支持并发控制和指数退避重试。"""
     import aiohttp
     import numpy as np
 
     cfg = ctx.settings
     results = [None] * len(texts)
 
-    async def _embed_batch(batch_texts: List[str], indices: List[int]):
+    async def _embed_batch(batch_texts: list[str], indices: list[int]):
         async with semaphore:
             payload = {
                 "model": cfg.embedding_model,
@@ -95,20 +95,20 @@ async def batch_embed(
                                 results[idx] = np.array(embeddings[i], dtype=np.float32)
                             return
                         elif resp.status == 429:
-                            wait = 5 * (2 ** attempt)
+                            wait = 5 * (2**attempt)
                             logger.warning(f"Embed rate limited, waiting {wait}s...")
                             await asyncio.sleep(wait)
                         else:
                             err_text = await resp.text()
-                            logger.warning(f"Embed API error {resp.status} (attempt {attempt+1}): {err_text[:100]}")
+                            logger.warning(f"Embed API error {resp.status} (attempt {attempt + 1}): {err_text[:100]}")
                             await asyncio.sleep(2 * (attempt + 1))
                 except asyncio.TimeoutError:
                     wait = 3 * (attempt + 1)
-                    logger.warning(f"Embed timeout (attempt {attempt+1}), retry in {wait}s")
+                    logger.warning(f"Embed timeout (attempt {attempt + 1}), retry in {wait}s")
                     await asyncio.sleep(wait)
                 except (aiohttp.ClientError, aiohttp.ServerDisconnectedError) as e:
                     wait = 2 * (attempt + 1)
-                    logger.warning(f"Embed connection error (attempt {attempt+1}): {e}")
+                    logger.warning(f"Embed connection error (attempt {attempt + 1}): {e}")
                     await asyncio.sleep(wait)
             # 所有重试失败后用零向量
             logger.error(f"Embed batch failed after 4 attempts ({len(batch_texts)} texts)")
@@ -124,7 +124,7 @@ async def batch_embed(
             min(win_start + cfg.embedding_batch_size * window_size, len(texts)),
             cfg.embedding_batch_size,
         ):
-            batch = texts[i:i + cfg.embedding_batch_size]
+            batch = texts[i : i + cfg.embedding_batch_size]
             indices = list(range(i, i + len(batch)))
             tasks.append(_embed_batch(batch, indices))
         await asyncio.gather(*tasks)
@@ -166,20 +166,20 @@ def is_substring(a: str, b: str) -> bool:
     return (a in b or b in a) and a != b
 
 
-async def find_candidates_async(ctx: DisambiguationContext) -> List[dict]:
+async def find_candidates_async(ctx: DisambiguationContext) -> list[dict]:
     """异步执行候选对发现。"""
     import aiohttp
 
     cfg = ctx.settings
     ctx.output_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Phase 1: 加载数据...")
-    with open(ctx.input_entities_path, "r", encoding="utf-8") as f:
+    with open(ctx.input_entities_path, encoding="utf-8") as f:
         entities = json.load(f)
-    with open(ctx.input_relations_path, "r", encoding="utf-8") as f:
+    with open(ctx.input_relations_path, encoding="utf-8") as f:
         relations = json.load(f)
 
     # 按 (type, vehicle_model) 分组，避免跨车型消歧。
-    groups: Dict[Tuple[str, str], List[dict]] = defaultdict(list)
+    groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for e in entities:
         etype = e["type"]
         if etype in cfg.skip_types:
@@ -193,7 +193,7 @@ async def find_candidates_async(ctx: DisambiguationContext) -> List[dict]:
     logger.info(f"  参与消歧实体数: {total_entities_in_groups}")
 
     # 构建边索引（用于后续 LLM 判断时提供关联边信息）
-    edge_index: Dict[str, List[dict]] = defaultdict(list)
+    edge_index: dict[str, list[dict]] = defaultdict(list)
     for r in relations:
         edge_index[r["source_entity_id"]].append(r)
         edge_index[r["target_entity_id"]].append(r)
@@ -244,16 +244,18 @@ async def find_candidates_async(ctx: DisambiguationContext) -> List[dict]:
                         if ed_ratio < cfg.edit_distance_ratio_threshold:
                             reasons.append(f"edit_dist_ratio={ed_ratio:.3f}")
 
-                    all_candidates.append({
-                        "entity_a_id": group_entities[i]["entity_id"],
-                        "entity_b_id": group_entities[j]["entity_id"],
-                        "entity_a_name": name_a,
-                        "entity_b_name": name_b,
-                        "type": etype,
-                        "model": model,
-                        "similarity": round(sim, 4),
-                        "reasons": reasons,
-                    })
+                    all_candidates.append(
+                        {
+                            "entity_a_id": group_entities[i]["entity_id"],
+                            "entity_b_id": group_entities[j]["entity_id"],
+                            "entity_a_name": name_a,
+                            "entity_b_name": name_b,
+                            "type": etype,
+                            "model": model,
+                            "similarity": round(sim, 4),
+                            "reasons": reasons,
+                        }
+                    )
 
     logger.info(f"  候选对总数: {len(all_candidates)}")
 
@@ -268,7 +270,7 @@ async def find_candidates_async(ctx: DisambiguationContext) -> List[dict]:
     return all_candidates
 
 
-def find_candidates(ctx: DisambiguationContext | None = None) -> List[dict]:
+def find_candidates(ctx: DisambiguationContext | None = None) -> list[dict]:
     """同步包装。"""
     return asyncio.run(find_candidates_async(ctx or make_context()))
 
@@ -276,4 +278,4 @@ def find_candidates(ctx: DisambiguationContext | None = None) -> List[dict]:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     candidates = find_candidates()
-    print(f"\n完成: {len(candidates)} 个候选对")
+    logger.info("完成: %s 个候选对", len(candidates))

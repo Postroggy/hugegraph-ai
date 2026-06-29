@@ -23,7 +23,7 @@ logger = logging.getLogger("car_graph_pipeline.disambiguation")
 
 
 def setup_logging(ctx: DisambiguationContext) -> None:
-    """配置日志：同时输出到控制台和当前 output_dir/run.log。"""
+    """配置日志: 同时输出到控制台和当前 output_dir/run.log。"""
     ctx.output_dir.mkdir(parents=True, exist_ok=True)
     log_file = ctx.output_dir / "run.log"
     fmt = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
@@ -157,11 +157,27 @@ def run_disambiguation(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="car graph 离线实体消歧流水线")
-    parser.add_argument("--phase", type=int, choices=[1, 2, 3, 4], default=None, help="只运行指定 phase，默认全量运行")
-    parser.add_argument("--input-dir", type=Path, default=None, help="包含 extracted_entities.json/extracted_relations.json 的目录")
+    parser.add_argument(
+        "--phase",
+        type=int,
+        choices=[1, 2, 3, 4],
+        default=None,
+        help="只运行指定 phase，默认全量运行",
+    )
+    parser.add_argument(
+        "--input-dir", type=Path, default=None, help="包含 extracted_entities.json/extracted_relations.json 的目录"
+    )
     parser.add_argument("--output-dir", type=Path, default=None, help="消歧输出目录")
-    parser.add_argument("--input-version", default=None, help="使用 car_graph_pipeline/output/version/<input-version> 作为输入")
-    parser.add_argument("--output-version", default=None, help="使用 car_graph_pipeline/output/version/<output-version> 作为输出")
+    parser.add_argument(
+        "--input-version",
+        default=None,
+        help="使用 car_graph_pipeline/output/version/<input-version> 作为输入",
+    )
+    parser.add_argument(
+        "--output-version",
+        default=None,
+        help="使用 car_graph_pipeline/output/version/<output-version> 作为输出",
+    )
     args = parser.parse_args()
     ok = run_disambiguation(
         phase=args.phase,

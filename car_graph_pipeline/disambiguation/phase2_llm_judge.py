@@ -5,7 +5,6 @@ import json
 import logging
 import re
 from collections import defaultdict
-from typing import Dict, List, Optional
 
 from openai import AsyncOpenAI
 from pydantic import BaseModel, field_validator
@@ -19,11 +18,13 @@ logger = logging.getLogger(__name__)
 
 # === Pydantic 模型用于验证 LLM 输出格式 ===
 
+
 class MergeDecisionItem(BaseModel):
     """LLM 返回的单个合并决策。"""
+
     pair_index: int
     decision: str
-    winner_id: Optional[str] = None
+    winner_id: str | None = None
     property_merge: str = "union"
     reason: str = ""
 
@@ -44,10 +45,16 @@ class MergeDecisionItem(BaseModel):
 
 # Schema 类型说明（给 LLM 提供上下文）
 TYPE_SCHEMA = {
-    "Function": "车辆功能（如座椅按摩、车道偏离预警）。属性: func_name, function_type, trigger_condition, alert_method, warnings",
+    "Function": (
+        "车辆功能（如座椅按摩、车道偏离预警）。"
+        "属性: func_name, function_type, trigger_condition, alert_method, warnings"
+    ),
     "Operation": "操作步骤（如通过按钮开启座椅按摩）。属性: op_name, steps(操作步骤列表), prerequisites(前置条件)",
     "Component": "车辆部件（如座椅按摩按钮、水温报警灯）。属性: comp_name, component_type, location",
-    "Status": "车辆状态（如警告灯亮起、功能已开启）。属性: status_name, status_type(正常/报警/异常), perceivable_way(感知方式)",
+    "Status": (
+        "车辆状态（如警告灯亮起、功能已开启）。"
+        "属性: status_name, status_type(正常/报警/异常), perceivable_way(感知方式)"
+    ),
     "Fault": "故障（如轮胎泄气、冷却液不足）。属性: fault_name, severity, fault_type",
     "VehicleSystem": "车辆系统（如冷却系统、智能互联系统）。属性: system_name, system_type",
     "Specification": "技术规格（如机油容量、轮胎气压）。属性: spec_name, spec_type, value, unit",
@@ -78,8 +85,8 @@ SYSTEM_PROMPT = """你是知识图谱实体消歧专家。你的任务是判断�
 请输出一个 JSON 数组，包含所有候选对的判断结果。不要输出其他任何内容。"""
 
 
-def build_user_prompt(batch: List[dict], edge_index: Dict[str, List[dict]]) -> str:
-    """构建 user prompt，包含候选对信息和关联边。"""
+def build_user_prompt(batch: list[dict], edge_index: dict[str, list[dict]]) -> str:
+    """构建 user prompt, 包含候选对信息和关联边。"""
     lines = []
     etype = batch[0]["type"]
     model = batch[0]["model"]
@@ -113,8 +120,8 @@ def build_user_prompt(batch: List[dict], edge_index: Dict[str, List[dict]]) -> s
     return "\n".join(lines)
 
 
-def _summarize_edges(edges: List[dict], entity_id: str, max_show: int = 5) -> str:
-    """边摘要：显示关联的边类型和对端实体名。"""
+def _summarize_edges(edges: list[dict], entity_id: str, max_show: int = 5) -> str:
+    """边摘要: 显示关联的边类型和对端实体名。"""
     if not edges:
         return "无"
     summaries = []
@@ -123,7 +130,7 @@ def _summarize_edges(edges: List[dict], entity_id: str, max_show: int = 5) -> st
             summaries.append(f"-[{e['type']}]-> {e['target_entity_id'].split('::')[-1]}")
         else:
             summaries.append(f"<-[{e['type']}]- {e['source_entity_id'].split('::')[-1]}")
-    suffix = f" (+{len(edges)-max_show}条)" if len(edges) > max_show else ""
+    suffix = f" (+{len(edges) - max_show}条)" if len(edges) > max_show else ""
     return "; ".join(summaries) + suffix
 
 
@@ -147,14 +154,14 @@ def extract_json_from_response(text: str) -> list:
     end = text.rfind("]")
     if start >= 0 and end > start:
         try:
-            return json.loads(text[start:end + 1])
+            return json.loads(text[start : end + 1])
         except json.JSONDecodeError:
             pass
     logger.warning(f"无法解析 LLM 返回: {text[:200]}")
     return []
 
 
-def validate_decisions(raw_decisions: list, batch_size: int) -> List[dict]:
+def validate_decisions(raw_decisions: list, batch_size: int) -> list[dict]:
     """使用 pydantic 验证 LLM 返回的决策格式。"""
     validated = []
     for item in raw_decisions:
@@ -173,7 +180,7 @@ async def call_llm(
     semaphore: asyncio.Semaphore,
     ctx: DisambiguationContext,
 ) -> str:
-    """调用 LLM API (openai SDK)，带指数退避重试。"""
+    """调用 LLM API (openai SDK), 带指数退避重试。"""
     cfg = ctx.settings
     async with semaphore:
         for attempt in range(cfg.llm_retries):
@@ -194,21 +201,21 @@ async def call_llm(
             except Exception as e:
                 err_str = str(e)
                 if "429" in err_str or "rate" in err_str.lower():
-                    wait = 5 * (2 ** attempt)  # 5, 10, 20, 40
-                    logger.warning(f"Rate limited, waiting {wait}s... (attempt {attempt+1})")
+                    wait = 5 * (2**attempt)  # 5, 10, 20, 40
+                    logger.warning(f"Rate limited, waiting {wait}s... (attempt {attempt + 1})")
                     await asyncio.sleep(wait)
                 elif "timeout" in err_str.lower() or "connect" in err_str.lower():
                     wait = 3 * (attempt + 1)
-                    logger.warning(f"Connection error, retry in {wait}s (attempt {attempt+1}): {err_str[:100]}")
+                    logger.warning(f"Connection error, retry in {wait}s (attempt {attempt + 1}): {err_str[:100]}")
                     await asyncio.sleep(wait)
                 else:
                     wait = 2 * (attempt + 1)
-                    logger.warning(f"LLM error (attempt {attempt+1}): {err_str[:150]}")
+                    logger.warning(f"LLM error (attempt {attempt + 1}): {err_str[:150]}")
                     await asyncio.sleep(wait)
     return ""
 
 
-async def judge_candidates_async(candidates: List[dict], ctx: DisambiguationContext) -> List[dict]:
+async def judge_candidates_async(candidates: list[dict], ctx: DisambiguationContext) -> list[dict]:
     """异步批量调用 LLM 判断候选对。"""
     if not candidates:
         logger.info("Phase 2: 无候选对需要判断")
@@ -218,13 +225,13 @@ async def judge_candidates_async(candidates: List[dict], ctx: DisambiguationCont
 
     # 加载实体和关系，构建索引
     logger.info("Phase 2: 加载实体和关系数据...")
-    with open(ctx.input_entities_path, "r", encoding="utf-8") as f:
+    with open(ctx.input_entities_path, encoding="utf-8") as f:
         entities = json.load(f)
-    with open(ctx.input_relations_path, "r", encoding="utf-8") as f:
+    with open(ctx.input_relations_path, encoding="utf-8") as f:
         relations = json.load(f)
 
     entity_map = {e["entity_id"]: e for e in entities}
-    edge_index: Dict[str, List[dict]] = defaultdict(list)
+    edge_index: dict[str, list[dict]] = defaultdict(list)
     for r in relations:
         edge_index[r["source_entity_id"]].append(r)
         edge_index[r["target_entity_id"]].append(r)
@@ -237,15 +244,15 @@ async def judge_candidates_async(candidates: List[dict], ctx: DisambiguationCont
         cand["entity_b_props"] = b.get("properties", {})
 
     # 按 (type, model) 分组后分批
-    grouped: Dict[tuple, List[dict]] = defaultdict(list)
+    grouped: dict[tuple, list[dict]] = defaultdict(list)
     for cand in candidates:
         grouped[(cand["type"], cand["model"])].append(cand)
 
     # 构建所有批次
     batches = []
-    for (etype, model), group_cands in grouped.items():
+    for group_cands in grouped.values():
         for i in range(0, len(group_cands), cfg.llm_batch_size):
-            batch = group_cands[i:i + cfg.llm_batch_size]
+            batch = group_cands[i : i + cfg.llm_batch_size]
             batches.append(batch)
 
     logger.info(f"  总批次: {len(batches)} (候选对 {len(candidates)}, batch_size={cfg.llm_batch_size})")
@@ -254,7 +261,7 @@ async def judge_candidates_async(candidates: List[dict], ctx: DisambiguationCont
     all_decisions = []
     start_batch = 0
     if ctx.partial_decisions_path.exists():
-        with open(ctx.partial_decisions_path, "r", encoding="utf-8") as f:
+        with open(ctx.partial_decisions_path, encoding="utf-8") as f:
             saved = json.load(f)
         all_decisions = saved.get("decisions", [])
         start_batch = saved.get("completed_batches", 0)
@@ -274,7 +281,7 @@ async def judge_candidates_async(candidates: List[dict], ctx: DisambiguationCont
     failed = 0
     validation_errors = 0
 
-    async def _process_batch(batch: List[dict], batch_idx: int) -> List[dict]:
+    async def _process_batch(batch: list[dict], batch_idx: int) -> list[dict]:
         nonlocal completed, failed, validation_errors
         prompt = build_user_prompt(batch, edge_index)
         response = await call_llm(client, prompt, semaphore, ctx)
@@ -297,18 +304,26 @@ async def judge_candidates_async(candidates: List[dict], ctx: DisambiguationCont
         for dec in validated:
             idx = dec["pair_index"] - 1
             if 0 <= idx < len(batch):
-                results.append({
-                    "entity_a_id": batch[idx]["entity_a_id"],
-                    "entity_b_id": batch[idx]["entity_b_id"],
-                    "decision": dec["decision"],
-                    "winner_id": dec.get("winner_id"),
-                    "property_merge": dec.get("property_merge", "union"),
-                    "reason": dec.get("reason", ""),
-                    "similarity": batch[idx]["similarity"],
-                })
+                results.append(
+                    {
+                        "entity_a_id": batch[idx]["entity_a_id"],
+                        "entity_b_id": batch[idx]["entity_b_id"],
+                        "decision": dec["decision"],
+                        "winner_id": dec.get("winner_id"),
+                        "property_merge": dec.get("property_merge", "union"),
+                        "reason": dec.get("reason", ""),
+                        "similarity": batch[idx]["similarity"],
+                    }
+                )
         completed += 1
         if completed % 50 == 0:
-            logger.info(f"  进度: {completed}/{len(batches)} 批次完成 (merge={sum(1 for d in all_decisions + results if d.get('decision')=='merge')})")
+            merge_total = sum(1 for d in all_decisions + results if d.get("decision") == "merge")
+            logger.info(
+                "  进度: %s/%s 批次完成 (merge=%s)",
+                completed,
+                len(batches),
+                merge_total,
+            )
         return results
 
     # 分窗口并发执行，每窗保存一次中间结果
@@ -316,22 +331,23 @@ async def judge_candidates_async(candidates: List[dict], ctx: DisambiguationCont
     remaining_batches = batches[start_batch:]
 
     for win_start in range(0, len(remaining_batches), window_size):
-        window = remaining_batches[win_start:win_start + window_size]
-        tasks = [
-            _process_batch(batch, start_batch + win_start + i)
-            for i, batch in enumerate(window)
-        ]
+        window = remaining_batches[win_start : win_start + window_size]
+        tasks = [_process_batch(batch, start_batch + win_start + i) for i, batch in enumerate(window)]
         results_nested = await asyncio.gather(*tasks)
         for results in results_nested:
             all_decisions.extend(results)
 
         # 保存中间结果（断点续跑用）
         with open(ctx.partial_decisions_path, "w", encoding="utf-8") as f:
-            json.dump({
-                "completed_batches": start_batch + win_start + len(window),
-                "total_batches": len(batches),
-                "decisions": all_decisions,
-            }, f, ensure_ascii=False)
+            json.dump(
+                {
+                    "completed_batches": start_batch + win_start + len(window),
+                    "total_batches": len(batches),
+                    "decisions": all_decisions,
+                },
+                f,
+                ensure_ascii=False,
+            )
 
     logger.info(f"  LLM 判断完成: {completed} 成功, {failed} 失败, 格式错误: {validation_errors}")
     merge_count = sum(1 for d in all_decisions if d["decision"] == "merge")
@@ -350,7 +366,7 @@ async def judge_candidates_async(candidates: List[dict], ctx: DisambiguationCont
     return all_decisions
 
 
-def judge_candidates(candidates: List[dict], ctx: DisambiguationContext | None = None) -> List[dict]:
+def judge_candidates(candidates: list[dict], ctx: DisambiguationContext | None = None) -> list[dict]:
     """同步包装。"""
     return asyncio.run(judge_candidates_async(candidates, ctx or make_context()))
 
@@ -361,10 +377,9 @@ if __name__ == "__main__":
     context = make_context()
     cand_path = context.candidates_path
     if not cand_path.exists():
-        print("请先运行 Phase 1 生成 candidates.json")
-        exit(1)
-    with open(cand_path, "r", encoding="utf-8") as f:
+        raise SystemExit("请先运行 Phase 1 生成 candidates.json")
+    with open(cand_path, encoding="utf-8") as f:
         candidates = json.load(f)
-    print(f"加载 {len(candidates)} 个候选对")
+    logger.info("加载 %s 个候选对", len(candidates))
     decisions = judge_candidates(candidates, context)
-    print(f"\n完成: {len(decisions)} 个决策")
+    logger.info("完成: %s 个决策", len(decisions))

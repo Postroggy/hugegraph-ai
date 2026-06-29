@@ -1,12 +1,11 @@
-"""格式转换：将 extracted_entities/relations.json 转换为 HugeGraph 导入格式。"""
+"""格式转换: 将 extracted_entities/relations.json 转换为 HugeGraph 导入格式。"""
+
 from __future__ import annotations
 
 import json
 import logging
-import sys
 from collections import Counter
 from pathlib import Path
-from typing import List
 
 from ..config import OUTPUT_DIR, get_version_dir
 
@@ -17,25 +16,122 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 VERTEX_LABELS = [
-    {"id": 1, "name": "VehicleBrand", "properties": ["entity_id", "brand_name", "country", "description", "source_doc"], "primary_keys": ["entity_id"]},
-    {"id": 2, "name": "VehicleModel", "properties": ["entity_id", "model_name", "year", "series", "fuel_type", "config", "description", "source_doc"], "primary_keys": ["entity_id"]},
-    {"id": 3, "name": "VehicleSystem", "properties": ["entity_id", "system_name", "system_type", "description", "source_doc"], "primary_keys": ["entity_id"]},
-    {"id": 4, "name": "Component", "properties": ["entity_id", "comp_name", "component_type", "location", "description", "source_doc"], "primary_keys": ["entity_id"]},
-    {"id": 5, "name": "Function", "properties": ["entity_id", "func_name", "function_type", "trigger_condition", "alert_method", "warnings", "description", "source_doc"], "primary_keys": ["entity_id"]},
-    {"id": 6, "name": "Status", "properties": ["entity_id", "status_name", "status_type", "perceivable_way", "description", "source_doc"], "primary_keys": ["entity_id"]},
-    {"id": 7, "name": "Fault", "properties": ["entity_id", "fault_name", "fault_type", "severity", "drivable", "risk_desc", "description", "source_doc"], "primary_keys": ["entity_id"]},
-    {"id": 8, "name": "Operation", "properties": ["entity_id", "op_name", "operation_type", "difficulty", "steps", "precondition", "warnings", "description", "source_doc"], "primary_keys": ["entity_id"]},
-    {"id": 9, "name": "MaintenanceItem", "properties": ["entity_id", "maint_name", "item_type", "interval", "warnings", "description", "source_doc"], "primary_keys": ["entity_id"]},
-    {"id": 10, "name": "Specification", "properties": ["entity_id", "spec_name", "value_text", "value_num", "unit", "condition_note", "description", "source_doc"], "primary_keys": ["entity_id"]},
-    {"id": 11, "name": "Material", "properties": ["entity_id", "material_name", "material_type", "spec", "brand", "description", "source_doc"], "primary_keys": ["entity_id"]},
+    {
+        "id": 1,
+        "name": "VehicleBrand",
+        "properties": ["entity_id", "brand_name", "country", "description", "source_doc"],
+        "primary_keys": ["entity_id"],
+    },
+    {
+        "id": 2,
+        "name": "VehicleModel",
+        "properties": ["entity_id", "model_name", "year", "series", "fuel_type", "config", "description", "source_doc"],
+        "primary_keys": ["entity_id"],
+    },
+    {
+        "id": 3,
+        "name": "VehicleSystem",
+        "properties": ["entity_id", "system_name", "system_type", "description", "source_doc"],
+        "primary_keys": ["entity_id"],
+    },
+    {
+        "id": 4,
+        "name": "Component",
+        "properties": ["entity_id", "comp_name", "component_type", "location", "description", "source_doc"],
+        "primary_keys": ["entity_id"],
+    },
+    {
+        "id": 5,
+        "name": "Function",
+        "properties": [
+            "entity_id",
+            "func_name",
+            "function_type",
+            "trigger_condition",
+            "alert_method",
+            "warnings",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+    },
+    {
+        "id": 6,
+        "name": "Status",
+        "properties": ["entity_id", "status_name", "status_type", "perceivable_way", "description", "source_doc"],
+        "primary_keys": ["entity_id"],
+    },
+    {
+        "id": 7,
+        "name": "Fault",
+        "properties": [
+            "entity_id",
+            "fault_name",
+            "fault_type",
+            "severity",
+            "drivable",
+            "risk_desc",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+    },
+    {
+        "id": 8,
+        "name": "Operation",
+        "properties": [
+            "entity_id",
+            "op_name",
+            "operation_type",
+            "difficulty",
+            "steps",
+            "precondition",
+            "warnings",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+    },
+    {
+        "id": 9,
+        "name": "MaintenanceItem",
+        "properties": ["entity_id", "maint_name", "item_type", "interval", "warnings", "description", "source_doc"],
+        "primary_keys": ["entity_id"],
+    },
+    {
+        "id": 10,
+        "name": "Specification",
+        "properties": [
+            "entity_id",
+            "spec_name",
+            "value_text",
+            "value_num",
+            "unit",
+            "condition_note",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+    },
+    {
+        "id": 11,
+        "name": "Material",
+        "properties": ["entity_id", "material_name", "material_type", "spec", "brand", "description", "source_doc"],
+        "primary_keys": ["entity_id"],
+    },
 ]
 
 NAME_PROPERTY_MAP = {
-    "VehicleBrand": "brand_name", "VehicleModel": "model_name",
-    "VehicleSystem": "system_name", "Component": "comp_name",
-    "Function": "func_name", "Status": "status_name",
-    "Fault": "fault_name", "Operation": "op_name",
-    "MaintenanceItem": "maint_name", "Specification": "spec_name",
+    "VehicleBrand": "brand_name",
+    "VehicleModel": "model_name",
+    "VehicleSystem": "system_name",
+    "Component": "comp_name",
+    "Function": "func_name",
+    "Status": "status_name",
+    "Fault": "fault_name",
+    "Operation": "op_name",
+    "MaintenanceItem": "maint_name",
+    "Specification": "spec_name",
     "Material": "material_name",
 }
 
@@ -106,12 +202,12 @@ def convert_relation_to_edge(relation: dict, entity_id_map: dict) -> dict | None
     }
 
 
-def run_convert(version: str = None, output_dir: Path = None):
+def run_convert(version: str | None = None, output_dir: Path | None = None):
     """执行格式转换。
 
     Args:
-        version: 数据版本（如 v3_disambiguated），默认使用 config.CURRENT_VERSION
-        output_dir: 输出目录，默认为 OUTPUT_DIR
+        version: 数据版本 (如 v3_disambiguated), 默认使用 config.CURRENT_VERSION
+        output_dir: 输出目录, 默认为 OUTPUT_DIR
     """
     ver_dir = get_version_dir(version)
     out_dir = output_dir or OUTPUT_DIR
@@ -132,9 +228,9 @@ def run_convert(version: str = None, output_dir: Path = None):
         return False
 
     logger.info(f"读取数据: {ver_dir}")
-    with open(entities_path, "r", encoding="utf-8") as f:
+    with open(entities_path, encoding="utf-8") as f:
         entities = json.load(f)
-    with open(relations_path, "r", encoding="utf-8") as f:
+    with open(relations_path, encoding="utf-8") as f:
         relations = json.load(f)
 
     logger.info(f"  实体数: {len(entities)}, 关系数: {len(relations)}")

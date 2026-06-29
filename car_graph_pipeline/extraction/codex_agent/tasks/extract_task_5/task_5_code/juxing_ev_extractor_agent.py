@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
 import time
@@ -10,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+logger = logging.getLogger(__name__)
 
 DOC_RUN_ID = "聚星EV用户手册"
 SOURCE_DOC_NAME = "聚星EV用户手册.md"
@@ -26,22 +28,120 @@ BLOCKED_DIR = OUT / "blocked"
 
 
 COMPONENT_TERMS = [
-    "车辆识别代号", "VIN代号", "车辆标牌", "车辆诊断接口", "电子控制单元", "驱动电机", "三合一电驱总成",
-    "微波窗口", "汽车电子标识", "前风窗玻璃", "前保险杠", "B柱", "前门门锁", "翼子板", "前舱盖",
-    "手套箱", "尾门", "座椅", "驾驶员座椅", "前排座椅", "后排座椅", "头枕", "安全带", "后排座椅安全带报警装置",
-    "安全气囊", "辅助保护装置", "儿童保护装置", "儿童座椅", "车门", "车窗", "中控门锁", "遥控钥匙",
-    "钥匙", "门锁", "电动车窗", "天窗", "外后视镜", "内后视镜", "方向盘", "喇叭", "组合仪表",
-    "显示屏", "中控屏", "仪表台", "开关", "按钮", "旋钮", "制动踏板", "加速踏板", "驻车制动",
-    "制动系统", "ABS", "ESC", "转向系统", "换挡机构", "挡位", "动力电池", "蓄电池", "充电口",
-    "充电接口", "慢充接口", "快充接口", "充电枪", "充电线", "充电指示灯", "电源开关", "READY指示灯",
-    "远光灯", "近光灯", "位置灯", "转向灯", "危险警告灯", "雾灯", "室内灯", "牌照灯", "制动灯",
-    "倒车灯", "雨刮器", "洗涤器", "洗涤液", "空调", "除霜", "出风口", "暖风", "冷却液",
-    "制动液", "齿轮油", "润滑油", "轮胎", "车轮", "胎压", "备胎", "千斤顶", "牵引钩",
-    "保险丝", "电机控制器", "高压线束", "低压蓄电池", "冷却系统", "行驶制动系", "悬架", "车架",
+    "车辆识别代号",
+    "VIN代号",
+    "车辆标牌",
+    "车辆诊断接口",
+    "电子控制单元",
+    "驱动电机",
+    "三合一电驱总成",
+    "微波窗口",
+    "汽车电子标识",
+    "前风窗玻璃",
+    "前保险杠",
+    "B柱",
+    "前门门锁",
+    "翼子板",
+    "前舱盖",
+    "手套箱",
+    "尾门",
+    "座椅",
+    "驾驶员座椅",
+    "前排座椅",
+    "后排座椅",
+    "头枕",
+    "安全带",
+    "后排座椅安全带报警装置",
+    "安全气囊",
+    "辅助保护装置",
+    "儿童保护装置",
+    "儿童座椅",
+    "车门",
+    "车窗",
+    "中控门锁",
+    "遥控钥匙",
+    "钥匙",
+    "门锁",
+    "电动车窗",
+    "天窗",
+    "外后视镜",
+    "内后视镜",
+    "方向盘",
+    "喇叭",
+    "组合仪表",
+    "显示屏",
+    "中控屏",
+    "仪表台",
+    "开关",
+    "按钮",
+    "旋钮",
+    "制动踏板",
+    "加速踏板",
+    "驻车制动",
+    "制动系统",
+    "ABS",
+    "ESC",
+    "转向系统",
+    "换挡机构",
+    "挡位",
+    "动力电池",
+    "蓄电池",
+    "充电口",
+    "充电接口",
+    "慢充接口",
+    "快充接口",
+    "充电枪",
+    "充电线",
+    "充电指示灯",
+    "电源开关",
+    "READY指示灯",
+    "远光灯",
+    "近光灯",
+    "位置灯",
+    "转向灯",
+    "危险警告灯",
+    "雾灯",
+    "室内灯",
+    "牌照灯",
+    "制动灯",
+    "倒车灯",
+    "雨刮器",
+    "洗涤器",
+    "洗涤液",
+    "空调",
+    "除霜",
+    "出风口",
+    "暖风",
+    "冷却液",
+    "制动液",
+    "齿轮油",
+    "润滑油",
+    "轮胎",
+    "车轮",
+    "胎压",
+    "备胎",
+    "千斤顶",
+    "牵引钩",
+    "保险丝",
+    "电机控制器",
+    "高压线束",
+    "低压蓄电池",
+    "冷却系统",
+    "行驶制动系",
+    "悬架",
+    "车架",
 ]
 
 MATERIAL_TERMS = [
-    "冷却液", "制动液", "洗涤液", "润滑油", "齿轮油", "蓄电池酸液", "制冷剂", "粘合剂", "各种粘合剂",
+    "冷却液",
+    "制动液",
+    "洗涤液",
+    "润滑油",
+    "齿轮油",
+    "蓄电池酸液",
+    "制冷剂",
+    "粘合剂",
+    "各种粘合剂",
 ]
 
 SYSTEM_RULES = [
@@ -60,10 +160,14 @@ SYSTEM_RULES = [
     ("维护保养系统", ["保养", "维护", "油液", "冷却液", "制动液", "润滑油", "洗涤液"]),
 ]
 
-OP_RE = re.compile(r"(按|按下|按压|按住|长按|拉|拉动|推|推动|踩|踩下|松开|转动|旋转|打开|开启|关闭|启动|起动|停止|选择|设置|调节|检查|更换|安装|拆下|插入|取出|连接|断开|加注|充电|挂入|切换|释放|拧)")
+OP_RE = re.compile(
+    r"(按|按下|按压|按住|长按|拉|拉动|推|推动|踩|踩下|松开|转动|旋转|打开|开启|关闭|启动|起动|停止|选择|设置|调节|检查|更换|安装|拆下|插入|取出|连接|断开|加注|充电|挂入|切换|释放|拧)"
+)
 WARN_RE = re.compile(r"(警告|危险|注意|切勿|不得|不要|禁止|否则|可能导致|人身伤害|死亡|事故|损坏|火灾|爆炸|触电)")
 STATUS_RE = re.compile(r"(指示灯|警告灯|报警|蜂鸣器|闪烁|点亮|熄灭|显示|提示|故障|异常|失效|过热|过低|过高)")
-SPEC_RE = re.compile(r"(?P<num>\d+(?:\.\d+)?)\s*(?P<unit>km/h|kPa|bar|MPa|V|A|W|kW|Ah|kWh|L|mL|mm|cm|m|kg|N·m|Nm|℃|°C|公里|千米|分钟|秒|年|个月|毫米|厘米|米|千克|升|毫升)")
+SPEC_RE = re.compile(
+    r"(?P<num>\d+(?:\.\d+)?)\s*(?P<unit>km/h|kPa|bar|MPa|V|A|W|kW|Ah|kWh|L|mL|mm|cm|m|kg|N·m|Nm|℃|°C|公里|千米|分钟|秒|年|个月|毫米|厘米|米|千克|升|毫升)"
+)
 
 
 def now() -> str:
@@ -110,7 +214,14 @@ def add_scope(props: dict[str, Any]) -> dict[str, Any]:
     return props
 
 
-def entity(chunk: dict[str, Any], typ: str, name: str, props: dict[str, Any], aliases: list[str] | None = None, source_text: str | None = None) -> dict[str, Any]:
+def entity(
+    chunk: dict[str, Any],
+    typ: str,
+    name: str,
+    props: dict[str, Any],
+    aliases: list[str] | None = None,
+    source_text: str | None = None,
+) -> dict[str, Any]:
     data = {
         "type": typ,
         "name": name,
@@ -123,7 +234,16 @@ def entity(chunk: dict[str, Any], typ: str, name: str, props: dict[str, Any], al
     return data
 
 
-def relation(chunk: dict[str, Any], typ: str, src_t: str, src_n: str, tgt_t: str, tgt_n: str, note: str, source_text: str | None = None) -> dict[str, Any]:
+def relation(
+    chunk: dict[str, Any],
+    typ: str,
+    src_t: str,
+    src_n: str,
+    tgt_t: str,
+    tgt_n: str,
+    note: str,
+    source_text: str | None = None,
+) -> dict[str, Any]:
     data = {
         "type": typ,
         "source_type": src_t,
@@ -140,14 +260,12 @@ def relation(chunk: dict[str, Any], typ: str, src_t: str, src_n: str, tgt_t: str
 
 def is_toc_or_boilerplate(chunk: dict[str, Any]) -> bool:
     text = chunk.get("text", "")
-    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
     if chunk.get("heading_path") == "目录":
         return True
-    if len(lines) >= 3 and sum(bool(re.search(r"\s\d{1,3}$", l)) for l in lines) >= max(2, len(lines) // 2):
+    if len(lines) >= 3 and sum(bool(re.search(r"\s\d{1,3}$", line)) for line in lines) >= max(2, len(lines) // 2):
         return True
-    if "图片是示意图" in text and len(text) < 180:
-        return True
-    return False
+    return bool("图片是示意图" in text and len(text) < 180)
 
 
 def split_sentences(text: str) -> list[str]:
@@ -213,14 +331,22 @@ def spec_entities(chunk: dict[str, Any], text: str) -> list[dict[str, Any]]:
         if name in seen:
             continue
         seen.add(name)
-        out.append(entity(chunk, "Specification", name, {
-            "spec_name": name,
-            "value_text": sent,
-            "value_num": float(m.group("num")),
-            "unit": m.group("unit"),
-            "condition_note": chunk.get("source_section", ""),
-            "description": sent,
-        }, source_text=sent))
+        out.append(
+            entity(
+                chunk,
+                "Specification",
+                name,
+                {
+                    "spec_name": name,
+                    "value_text": sent,
+                    "value_num": float(m.group("num")),
+                    "unit": m.group("unit"),
+                    "condition_note": chunk.get("source_section", ""),
+                    "description": sent,
+                },
+                source_text=sent,
+            )
+        )
     return out
 
 
@@ -228,76 +354,144 @@ def material_entities(chunk: dict[str, Any], text: str) -> list[dict[str, Any]]:
     out = []
     for term in MATERIAL_TERMS:
         if term in text:
-            out.append(entity(chunk, "Material", term, {
-                "material_name": term,
-                "material_type": "车辆油液/材料",
-                "description": f"当前 chunk 提及的{term}。",
-            }, source_text=direct_sentence(text, term)))
+            out.append(
+                entity(
+                    chunk,
+                    "Material",
+                    term,
+                    {
+                        "material_name": term,
+                        "material_type": "车辆油液/材料",
+                        "description": f"当前 chunk 提及的{term}。",
+                    },
+                    source_text=direct_sentence(text, term),
+                )
+            )
     return out[:6]
 
 
 def warning_operations(chunk: dict[str, Any], text: str) -> list[dict[str, Any]]:
     ops: list[dict[str, Any]] = []
     if any(term in text for term in ["有毒物质", "不要饮用", "远离伤口", "蓄电池酸液", "制冷剂", "粘合剂"]):
-        sent = "机动车上使用的多数液体和有些物质为有毒物质，任何情况下都不要饮用，且应尽可能使其远离伤口；务必仔细阅读并绝对遵守打印或压印在零部件上的说明。"
-        ops.append(entity(chunk, "Operation", "安全处理有毒液体和物质", {
-            "op_name": "安全处理有毒液体和物质",
-            "operation_type": "安全注意事项",
-            "steps": "不要饮用机动车上使用的有毒液体和物质；尽可能使其远离伤口；仔细阅读并遵守打印或压印在零部件上的说明。",
-            "precondition": "接触或处理车辆液体、有毒物质或粘合剂时。",
-            "warnings": "这些物质可能危害健康和人身安全。",
-            "description": sent,
-        }, source_text=sent))
+        sent = (
+            "机动车上使用的多数液体和有些物质为有毒物质，任何情况下都不要饮用，"
+            "且应尽可能使其远离伤口；务必仔细阅读并绝对遵守打印或压印在零部件上的说明。"
+        )
+        ops.append(
+            entity(
+                chunk,
+                "Operation",
+                "安全处理有毒液体和物质",
+                {
+                    "op_name": "安全处理有毒液体和物质",
+                    "operation_type": "安全注意事项",
+                    "steps": (
+                        "不要饮用机动车上使用的有毒液体和物质；尽可能使其远离伤口；"
+                        "仔细阅读并遵守打印或压印在零部件上的说明。"
+                    ),
+                    "precondition": "接触或处理车辆液体、有毒物质或粘合剂时。",
+                    "warnings": "这些物质可能危害健康和人身安全。",
+                    "description": sent,
+                },
+                source_text=sent,
+            )
+        )
     if "儿童" in text or "动物" in text:
-        sent = "为防止由儿童或动物所引起的事故或人员伤亡，切勿将他们留在无成人看管的车内。如果在炎热天气，还可能导致他们窒息。"
-        ops.append(entity(chunk, "Operation", "防止儿童或动物引发事故", {
-            "op_name": "防止儿童或动物引发事故",
-            "operation_type": "安全注意事项",
-            "steps": "切勿将儿童或动物留在无成人看管的车内。",
-            "precondition": "车辆停放或无人监管时。",
-            "warnings": "儿童或动物操作车上控制装置和开关，或接触车内设备或物体，可能导致事故和人员伤亡；炎热天气还可能导致窒息。",
-            "description": sent,
-        }, source_text=sent))
+        sent = (
+            "为防止由儿童或动物所引起的事故或人员伤亡，切勿将他们留在无成人看管的车内。"
+            "如果在炎热天气，还可能导致他们窒息。"
+        )
+        ops.append(
+            entity(
+                chunk,
+                "Operation",
+                "防止儿童或动物引发事故",
+                {
+                    "op_name": "防止儿童或动物引发事故",
+                    "operation_type": "安全注意事项",
+                    "steps": "切勿将儿童或动物留在无成人看管的车内。",
+                    "precondition": "车辆停放或无人监管时。",
+                    "warnings": (
+                        "儿童或动物操作车上控制装置和开关，或接触车内设备或物体，"
+                        "可能导致事故和人员伤亡；炎热天气还可能导致窒息。"
+                    ),
+                    "description": sent,
+                },
+                source_text=sent,
+            )
+        )
     if "安全带" in text and "必须佩戴安全带" in text:
         sent = "您车上的每个座椅都配备了安全带，以降低发生事故时导致人身伤害的可能性。要求所有乘员必须佩戴安全带。"
-        ops.append(entity(chunk, "Operation", "乘员佩戴安全带", {
-            "op_name": "乘员佩戴安全带",
-            "operation_type": "乘员保护操作",
-            "steps": "所有乘员必须佩戴安全带。",
-            "precondition": "乘员就座和车辆使用时。",
-            "warnings": "佩戴安全带可降低发生事故时导致人身伤害的可能性。",
-            "description": sent,
-        }, source_text=sent))
+        ops.append(
+            entity(
+                chunk,
+                "Operation",
+                "乘员佩戴安全带",
+                {
+                    "op_name": "乘员佩戴安全带",
+                    "operation_type": "乘员保护操作",
+                    "steps": "所有乘员必须佩戴安全带。",
+                    "precondition": "乘员就座和车辆使用时。",
+                    "warnings": "佩戴安全带可降低发生事故时导致人身伤害的可能性。",
+                    "description": sent,
+                },
+                source_text=sent,
+            )
+        )
     if "误操作安全气囊" in text:
         sent = "误操作安全气囊可能导致人身伤害。"
-        ops.append(entity(chunk, "Operation", "避免误操作安全气囊", {
-            "op_name": "避免误操作安全气囊",
-            "operation_type": "乘员保护注意事项",
-            "steps": "参阅驾驶之前章节中的乘员保护装置说明，避免误操作安全气囊。",
-            "precondition": "涉及安全气囊或乘员保护装置时。",
-            "warnings": sent,
-            "description": sent,
-        }, source_text=sent))
+        ops.append(
+            entity(
+                chunk,
+                "Operation",
+                "避免误操作安全气囊",
+                {
+                    "op_name": "避免误操作安全气囊",
+                    "operation_type": "乘员保护注意事项",
+                    "steps": "参阅驾驶之前章节中的乘员保护装置说明，避免误操作安全气囊。",
+                    "precondition": "涉及安全气囊或乘员保护装置时。",
+                    "warnings": sent,
+                    "description": sent,
+                },
+                source_text=sent,
+            )
+        )
     if "该标记表示" in text:
         sent = "该标记表示：为避免对自身或他人造成人身伤害，必须严格、准确地遵循相关步骤。"
-        ops.append(entity(chunk, "Operation", "遵循警告标记步骤", {
-            "op_name": "遵循警告标记步骤",
-            "operation_type": "安全注意事项",
-            "steps": "看到该标记时，严格、准确地遵循相关步骤。",
-            "precondition": "手册出现该警告标记时。",
-            "warnings": "用于避免对自身或他人造成人身伤害。",
-            "description": sent,
-        }, source_text=sent))
+        ops.append(
+            entity(
+                chunk,
+                "Operation",
+                "遵循警告标记步骤",
+                {
+                    "op_name": "遵循警告标记步骤",
+                    "operation_type": "安全注意事项",
+                    "steps": "看到该标记时，严格、准确地遵循相关步骤。",
+                    "precondition": "手册出现该警告标记时。",
+                    "warnings": "用于避免对自身或他人造成人身伤害。",
+                    "description": sent,
+                },
+                source_text=sent,
+            )
+        )
     if "避免损坏您的车辆" in text:
         sent = "这里表示必须遵循相关步骤，以避免损坏您的车辆。"
-        ops.append(entity(chunk, "Operation", "遵循注意标记步骤", {
-            "op_name": "遵循注意标记步骤",
-            "operation_type": "车辆保护注意事项",
-            "steps": "看到该注意标记时，遵循相关步骤。",
-            "precondition": "手册出现该注意标记时。",
-            "warnings": "用于避免损坏车辆。",
-            "description": sent,
-        }, source_text=sent))
+        ops.append(
+            entity(
+                chunk,
+                "Operation",
+                "遵循注意标记步骤",
+                {
+                    "op_name": "遵循注意标记步骤",
+                    "operation_type": "车辆保护注意事项",
+                    "steps": "看到该注意标记时，遵循相关步骤。",
+                    "precondition": "手册出现该注意标记时。",
+                    "warnings": "用于避免损坏车辆。",
+                    "description": sent,
+                },
+                source_text=sent,
+            )
+        )
     return ops
 
 
@@ -310,15 +504,43 @@ def build_draft(chunk: dict[str, Any], attempt: int, review: dict[str, Any] | No
     notes: list[str] = []
 
     if chunk["chunk_id"].endswith("_s0000"):
-        entities.append(entity(chunk, "VehicleBrand", VEHICLE_BRAND, {
-            "brand_name": VEHICLE_BRAND,
-            "description": "南京依维柯汽车有限公司是本手册产品的提供方。",
-        }, aliases=["南京依维柯汽车有限公司"], source_text="感谢您选择了南京依维柯汽车有限公司的产品"))
-        entities.append(entity(chunk, "VehicleModel", VEHICLE_MODEL, {
-            "model_name": VEHICLE_MODEL,
-            "description": "本 doc-run 确认的车型范围；该手册提供了解车辆所需的信息。",
-        }, source_text="《产品使用手册》将为您提供了解您车辆所需的信息"))
-        relations.append(relation(chunk, "HAS_MODEL", "VehicleBrand", VEHICLE_BRAND, "VehicleModel", VEHICLE_MODEL, "doc-run 车辆 scope 已确认品牌和车型。", text))
+        entities.append(
+            entity(
+                chunk,
+                "VehicleBrand",
+                VEHICLE_BRAND,
+                {
+                    "brand_name": VEHICLE_BRAND,
+                    "description": "南京依维柯汽车有限公司是本手册产品的提供方。",
+                },
+                aliases=["南京依维柯汽车有限公司"],
+                source_text="感谢您选择了南京依维柯汽车有限公司的产品",
+            )
+        )
+        entities.append(
+            entity(
+                chunk,
+                "VehicleModel",
+                VEHICLE_MODEL,
+                {
+                    "model_name": VEHICLE_MODEL,
+                    "description": "本 doc-run 确认的车型范围；该手册提供了解车辆所需的信息。",
+                },
+                source_text="《产品使用手册》将为您提供了解您车辆所需的信息",
+            )
+        )
+        relations.append(
+            relation(
+                chunk,
+                "HAS_MODEL",
+                "VehicleBrand",
+                VEHICLE_BRAND,
+                "VehicleModel",
+                VEHICLE_MODEL,
+                "doc-run 车辆 scope 已确认品牌和车型。",
+                text,
+            )
+        )
         notes.append("手册前言，未出现具体按钮、部件操作步骤、故障状态、维护项或可量化规格。")
     elif is_toc_or_boilerplate(chunk):
         notes.append("目录、页码索引或通用说明，无可抽取的车辆实体/关系事实。")
@@ -330,11 +552,19 @@ def build_draft(chunk: dict[str, Any], attempt: int, review: dict[str, Any] | No
             if sys_name and sys_name not in system_names:
                 system_names.append(sys_name)
         for sys_name in system_names:
-            entities.append(entity(chunk, "VehicleSystem", sys_name, {
-                "system_name": sys_name,
-                "system_type": sys_name.replace("系统", ""),
-                "description": f"当前 chunk 围绕{sys_name}相关部件、状态或操作展开。",
-            }, source_text=text))
+            entities.append(
+                entity(
+                    chunk,
+                    "VehicleSystem",
+                    sys_name,
+                    {
+                        "system_name": sys_name,
+                        "system_type": sys_name.replace("系统", ""),
+                        "description": f"当前 chunk 围绕{sys_name}相关部件、状态或操作展开。",
+                    },
+                    source_text=text,
+                )
+            )
         for comp in comp_names:
             comp_type = "车辆部件"
             if any(k in comp for k in ["按钮", "开关", "旋钮"]):
@@ -343,33 +573,101 @@ def build_draft(chunk: dict[str, Any], attempt: int, review: dict[str, Any] | No
                 comp_type = "显示/告警部件"
             elif any(k in comp for k in ["冷却液", "制动液", "洗涤液", "润滑油"]):
                 comp_type = "油液相关部件"
-            entities.append(entity(chunk, "Component", comp, {
-                "comp_name": comp,
-                "component_type": comp_type,
-                "description": f"当前 chunk 明确提及{comp}。",
-            }, source_text=text))
+            entities.append(
+                entity(
+                    chunk,
+                    "Component",
+                    comp,
+                    {
+                        "comp_name": comp,
+                        "component_type": comp_type,
+                        "description": f"当前 chunk 明确提及{comp}。",
+                    },
+                    source_text=text,
+                )
+            )
             sys_name = system_for(comp, text)
             if sys_name:
-                relations.append(relation(chunk, "BELONGS_TO", "Component", comp, "VehicleSystem", sys_name, f"{comp}属于或关联{sys_name}。", text))
+                relations.append(
+                    relation(
+                        chunk,
+                        "BELONGS_TO",
+                        "Component",
+                        comp,
+                        "VehicleSystem",
+                        sys_name,
+                        f"{comp}属于或关联{sys_name}。",
+                        text,
+                    )
+                )
 
         if comp_names:
-            entities.append(entity(chunk, "VehicleModel", VEHICLE_MODEL, {
-                "model_name": VEHICLE_MODEL,
-                "description": "当前 chunk 的车辆 scope 车型。",
-            }, source_text=text))
+            entities.append(
+                entity(
+                    chunk,
+                    "VehicleModel",
+                    VEHICLE_MODEL,
+                    {
+                        "model_name": VEHICLE_MODEL,
+                        "description": "当前 chunk 的车辆 scope 车型。",
+                    },
+                    source_text=text,
+                )
+            )
             for comp in comp_names[:8]:
-                relations.append(relation(chunk, "HAS_COMPONENT", "VehicleModel", VEHICLE_MODEL, "Component", comp, f"当前 chunk 在车型手册中描述{comp}。", text))
+                relations.append(
+                    relation(
+                        chunk,
+                        "HAS_COMPONENT",
+                        "VehicleModel",
+                        VEHICLE_MODEL,
+                        "Component",
+                        comp,
+                        f"当前 chunk 在车型手册中描述{comp}。",
+                        text,
+                    )
+                )
 
         specs = spec_entities(chunk, text)
         entities.extend(specs)
         if specs:
             if comp_names:
                 for spec in specs[:6]:
-                    relations.append(relation(chunk, "HAS_SPEC", "Component", comp_names[0], "Specification", spec["name"], f"{spec['name']}是{comp_names[0]}相关规格。", spec["source_snippet"]))
+                    relations.append(
+                        relation(
+                            chunk,
+                            "HAS_SPEC",
+                            "Component",
+                            comp_names[0],
+                            "Specification",
+                            spec["name"],
+                            f"{spec['name']}是{comp_names[0]}相关规格。",
+                            spec["source_snippet"],
+                        )
+                    )
             else:
-                entities.append(entity(chunk, "VehicleModel", VEHICLE_MODEL, {"model_name": VEHICLE_MODEL, "description": "当前 chunk 的车辆 scope 车型。"}, source_text=text))
+                entities.append(
+                    entity(
+                        chunk,
+                        "VehicleModel",
+                        VEHICLE_MODEL,
+                        {"model_name": VEHICLE_MODEL, "description": "当前 chunk 的车辆 scope 车型。"},
+                        source_text=text,
+                    )
+                )
                 for spec in specs[:6]:
-                    relations.append(relation(chunk, "MODEL_HAS_SPEC", "VehicleModel", VEHICLE_MODEL, "Specification", spec["name"], "当前 chunk 给出车型相关规格。", spec["source_snippet"]))
+                    relations.append(
+                        relation(
+                            chunk,
+                            "MODEL_HAS_SPEC",
+                            "VehicleModel",
+                            VEHICLE_MODEL,
+                            "Specification",
+                            spec["name"],
+                            "当前 chunk 给出车型相关规格。",
+                            spec["source_snippet"],
+                        )
+                    )
 
         mats = material_entities(chunk, text)
         entities.extend(mats)
@@ -381,36 +679,82 @@ def build_draft(chunk: dict[str, Any], attempt: int, review: dict[str, Any] | No
         steps = operation_steps(text)
         if steps and not warning_ops:
             op_name = f"{source_section or '相关功能'}操作"
-            entities.append(entity(chunk, "Operation", op_name, {
-                "op_name": op_name,
-                "operation_type": "车辆操作",
-                "steps": steps,
-                "precondition": "",
-                "warnings": "；".join([s for s in split_sentences(text) if WARN_RE.search(s)][:3]),
-                "description": steps,
-            }, source_text=steps))
+            entities.append(
+                entity(
+                    chunk,
+                    "Operation",
+                    op_name,
+                    {
+                        "op_name": op_name,
+                        "operation_type": "车辆操作",
+                        "steps": steps,
+                        "precondition": "",
+                        "warnings": "；".join([s for s in split_sentences(text) if WARN_RE.search(s)][:3]),
+                        "description": steps,
+                    },
+                    source_text=steps,
+                )
+            )
             for comp in comp_names[:4]:
-                relations.append(relation(chunk, "OPERATES_ON", "Operation", op_name, "Component", comp, f"{op_name}涉及{comp}。", steps))
+                relations.append(
+                    relation(
+                        chunk, "OPERATES_ON", "Operation", op_name, "Component", comp, f"{op_name}涉及{comp}。", steps
+                    )
+                )
             if any(k in text for k in ["需要", "使用", "加注", "更换"]) and not WARN_RE.search(text):
                 for mat in mats[:3]:
-                    relations.append(relation(chunk, "REQUIRES", "Operation", op_name, "Material", mat["name"], f"{op_name}需要或使用{mat['name']}。", direct_sentence(text, mat["name"])))
+                    relations.append(
+                        relation(
+                            chunk,
+                            "REQUIRES",
+                            "Operation",
+                            op_name,
+                            "Material",
+                            mat["name"],
+                            f"{op_name}需要或使用{mat['name']}。",
+                            direct_sentence(text, mat["name"]),
+                        )
+                    )
 
         if STATUS_RE.search(text):
             warning_sents = [s for s in split_sentences(text) if STATUS_RE.search(s) or WARN_RE.search(s)]
-            for idx, sent in enumerate(warning_sents[:5], start=1):
+            for sent in warning_sents[:5]:
                 if STATUS_RE.search(sent):
                     status_name = re.sub(r"\s+", "", sent[:24])
-                    entities.append(entity(chunk, "Status", status_name, {
-                        "status_name": status_name,
-                        "status_type": "提示/警告状态",
-                        "perceivable_way": "文本描述、指示灯、显示或报警",
-                        "description": sent,
-                    }, source_text=sent))
+                    entities.append(
+                        entity(
+                            chunk,
+                            "Status",
+                            status_name,
+                            {
+                                "status_name": status_name,
+                                "status_type": "提示/警告状态",
+                                "perceivable_way": "文本描述、指示灯、显示或报警",
+                                "description": sent,
+                            },
+                            source_text=sent,
+                        )
+                    )
                     if comp_names:
-                        relations.append(relation(chunk, "HAS_STATUS", "Component", comp_names[0], "Status", status_name, f"{comp_names[0]}关联该状态。", sent))
+                        relations.append(
+                            relation(
+                                chunk,
+                                "HAS_STATUS",
+                                "Component",
+                                comp_names[0],
+                                "Status",
+                                status_name,
+                                f"{comp_names[0]}关联该状态。",
+                                sent,
+                            )
+                        )
 
     if review:
-        notes.append(f"根据 reviewer attempt{review.get('attempt')} 反馈修订：{'; '.join(i.get('message', '') for i in review.get('issues', [])[:3])}")
+        notes.append(
+            "根据 reviewer attempt"
+            f"{review.get('attempt')} 反馈修订："
+            f"{'; '.join(i.get('message', '') for i in review.get('issues', [])[:3])}"
+        )
 
     dedup_entities: list[dict[str, Any]] = []
     seen_entities = set()
@@ -423,7 +767,10 @@ def build_draft(chunk: dict[str, Any], attempt: int, review: dict[str, Any] | No
     dedup_relations: list[dict[str, Any]] = []
     seen_relations = set()
     for r in relations:
-        if (r["source_type"], r["source_name"]) not in entity_names or (r["target_type"], r["target_name"]) not in entity_names:
+        if (r["source_type"], r["source_name"]) not in entity_names or (
+            r["target_type"],
+            r["target_name"],
+        ) not in entity_names:
             continue
         key = (r["type"], r["source_type"], r["source_name"], r["target_type"], r["target_name"])
         if key not in seen_relations:
@@ -445,7 +792,7 @@ def build_draft(chunk: dict[str, Any], attempt: int, review: dict[str, Any] | No
         "line_end": chunk.get("line_end"),
         "entities": dedup_entities,
         "relations": dedup_relations,
-        "notes": notes + [f"attempt={attempt}; extraction_scope=current_chunk_only"],
+        "notes": [*notes, f"attempt={attempt}; extraction_scope=current_chunk_only"],
     }
 
 
@@ -473,18 +820,21 @@ def self_review(chunk: dict[str, Any], draft: dict[str, Any], attempt: int) -> d
             "evidence_complete": all(e.get("evidence") and e.get("source_snippet") for e in draft.get("entities", []))
             and all(r.get("evidence") and r.get("source_snippet") for r in draft.get("relations", [])),
             "no_out_of_scope_content": True,
-            "vehicle_scope_correct": draft.get("vehicle_brand") == VEHICLE_BRAND and draft.get("vehicle_model") == VEHICLE_MODEL,
+            "vehicle_scope_correct": draft.get("vehicle_brand") == VEHICLE_BRAND
+            and draft.get("vehicle_model") == VEHICLE_MODEL,
         },
         "notes": "self_review chunk 按当前 chunk 证据保守抽取。",
     }
 
 
-def fallback_self_review(chunk: dict[str, Any], draft: dict[str, Any], attempt: int, no_review_polls: int) -> dict[str, Any]:
+def fallback_self_review(
+    chunk: dict[str, Any], draft: dict[str, Any], attempt: int, no_review_polls: int
+) -> dict[str, Any]:
     review = self_review(chunk, draft, attempt)
     review["status"] = "pass"
     review["fallback"] = True
     review["no_review_polls"] = no_review_polls
-    review["notes"] = "reviewer timeout fallback self-review; reviewer fail/block still has priority if it appeared before finalization."
+    review["notes"] = "reviewer timeout fallback self-review; reviewer fail/block has priority before finalization."
     return review
 
 
@@ -567,7 +917,12 @@ def finalize_fallback_from_awaiting(chunk: dict[str, Any], state: dict[str, Any]
         "final_path": str(final_path),
     }
     update_state(
-        {"phase": "awaiting_review", "current_chunk": chunk["chunk_id"], "attempt": attempt, "draft_path": str(draft_path)},
+        {
+            "phase": "awaiting_review",
+            "current_chunk": chunk["chunk_id"],
+            "attempt": attempt,
+            "draft_path": str(draft_path),
+        },
         changes,
         {
             "event": "fallback_self_review_finalized",
@@ -584,15 +939,18 @@ def finalize_fallback_from_awaiting(chunk: dict[str, Any], state: dict[str, Any]
 def write_blocked_and_advance(chunk: dict[str, Any], reason: str) -> None:
     BLOCKED_DIR.mkdir(parents=True, exist_ok=True)
     blocked_path = BLOCKED_DIR / f"{DOC_RUN_ID}_{chunk['chunk_id']}.blocked.json"
-    atomic_write_json(blocked_path, {
-        "doc_run_id": DOC_RUN_ID,
-        "source_doc_name": SOURCE_DOC_NAME,
-        "chunk_id": chunk["chunk_id"],
-        "reason": reason,
-        "vehicle_brand": VEHICLE_BRAND,
-        "vehicle_model": VEHICLE_MODEL,
-        "created_at": now(),
-    })
+    atomic_write_json(
+        blocked_path,
+        {
+            "doc_run_id": DOC_RUN_ID,
+            "source_doc_name": SOURCE_DOC_NAME,
+            "chunk_id": chunk["chunk_id"],
+            "reason": reason,
+            "vehicle_brand": VEHICLE_BRAND,
+            "vehicle_model": VEHICLE_MODEL,
+            "created_at": now(),
+        },
+    )
     state = load_json(STATE_PATH)
     chunk_ids = state["chunk_ids"]
     next_index = state["current_index"] + 1
@@ -613,7 +971,12 @@ def write_blocked_and_advance(chunk: dict[str, Any], reason: str) -> None:
     update_state(
         {"current_chunk": chunk["chunk_id"]},
         changes,
-        {"event": "blocked_chunk_advanced", "chunk_id": chunk["chunk_id"], "blocked_path": str(blocked_path), "reason": reason},
+        {
+            "event": "blocked_chunk_advanced",
+            "chunk_id": chunk["chunk_id"],
+            "blocked_path": str(blocked_path),
+            "reason": reason,
+        },
     )
 
 
@@ -652,7 +1015,12 @@ def process_reviewer_gate(chunk: dict[str, Any], poll_seconds: int, max_attempts
             update_state(
                 {"phase": phase, "current_chunk": chunk["chunk_id"], "attempt": attempt},
                 {"phase": "awaiting_review", "draft_path": str(draft_path)},
-                {"event": "draft_written_awaiting_review", "chunk_id": chunk["chunk_id"], "attempt": attempt, "draft_path": str(draft_path)},
+                {
+                    "event": "draft_written_awaiting_review",
+                    "chunk_id": chunk["chunk_id"],
+                    "attempt": attempt,
+                    "draft_path": str(draft_path),
+                },
             )
         elif phase == "awaiting_review":
             expected_review = DOC_RUN / "chunk_reviews" / f"{chunk['chunk_id']}.attempt{attempt}.review.json"
@@ -704,11 +1072,11 @@ def run(limit: int | None = None, poll_seconds: int | None = None) -> None:
     while True:
         state = load_json(STATE_PATH)
         if state.get("phase") == "complete":
-            print("doc-run complete")
+            logger.info("doc-run complete")
             return
         chunk_id = state.get("current_chunk")
         if not chunk_id:
-            print("no current chunk")
+            logger.info("no current chunk")
             return
         chunk = next(c for c in chunks if c["chunk_id"] == chunk_id)
         flow = policy.get(chunk_id, "self_review")
@@ -721,11 +1089,12 @@ def run(limit: int | None = None, poll_seconds: int | None = None) -> None:
             process_reviewer_gate(chunk, effective_poll, int(state.get("max_attempts") or 3))
         processed += 1
         if limit and processed >= limit:
-            print(f"stopped after processing {processed} chunk(s)")
+            logger.info("stopped after processing %s chunk(s)", processed)
             return
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int)
     parser.add_argument("--poll-seconds", type=int)

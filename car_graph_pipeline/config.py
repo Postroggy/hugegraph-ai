@@ -1,4 +1,5 @@
 """统一配置 — 所有阶段共享的路径、服务地址、模型参数。"""
+
 import os
 import re
 from pathlib import Path
@@ -45,10 +46,12 @@ def _normalize_openai_base_url(raw_url: str) -> str:
 
 _LOCAL_ENV = _load_local_env_config()
 
-def get_version_dir(version: str = None) -> Path:
+
+def get_version_dir(version: str | None = None) -> Path:
     """获取指定版本的数据目录。"""
     v = version or CURRENT_VERSION
     return VERSION_DIR / v
+
 
 # ============================================================================
 # HugeGraph Server
@@ -86,7 +89,12 @@ EMBEDDING_TIMEOUT = 600  # 秒
 LLM_BASE_URL = _normalize_openai_base_url(
     os.getenv("LLM_BASE_URL") or _LOCAL_ENV.get("LLM_BASE_URL", "https://oneapi-comate.baidu-int.com/v1")
 )
-LLM_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or _LOCAL_ENV.get("LLM_API_KEY") or _LOCAL_ENV.get("key", "")
+LLM_API_KEY = (
+    os.getenv("LLM_API_KEY")
+    or os.getenv("OPENAI_API_KEY")
+    or _LOCAL_ENV.get("LLM_API_KEY")
+    or _LOCAL_ENV.get("key", "")
+)
 LLM_EXTRACT_KEY = LLM_API_KEY
 
 # 各阶段使用的模型

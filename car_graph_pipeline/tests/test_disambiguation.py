@@ -6,7 +6,6 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1].parent
 sys.path.insert(0, str(REPO_ROOT))
 
@@ -100,8 +99,12 @@ class DisambiguationTest(unittest.TestCase):
                     "properties": {"vehicle_model": "ModelA"},
                 }
             ]
-            (input_dir / "extracted_entities.json").write_text(json.dumps(entities, ensure_ascii=False), encoding="utf-8")
-            (input_dir / "extracted_relations.json").write_text(json.dumps(relations, ensure_ascii=False), encoding="utf-8")
+            (input_dir / "extracted_entities.json").write_text(
+                json.dumps(entities, ensure_ascii=False), encoding="utf-8"
+            )
+            (input_dir / "extracted_relations.json").write_text(
+                json.dumps(relations, ensure_ascii=False), encoding="utf-8"
+            )
 
             ctx = make_context(
                 settings=DisambiguationSettings(max_entity_reduction_pct=40.0),

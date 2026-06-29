@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
 from collections import Counter
 from pathlib import Path
@@ -16,52 +17,333 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 OUTPUT_DIR = PROJECT_ROOT / "output" / "new_doc_output"
+logger = logging.getLogger(__name__)
 
 # Schema — 每个 label 都新增 vehicle_model 属性
 VERTEX_LABELS = [
-    {"id": 1, "name": "VehicleBrand", "properties": ["entity_id", "brand_name", "country", "vehicle_model", "description", "source_doc"], "primary_keys": ["entity_id"], "nullable_keys": ["brand_name", "country", "vehicle_model", "description", "source_doc"]},
-    {"id": 2, "name": "VehicleModel", "properties": ["entity_id", "model_name", "year", "series", "fuel_type", "config", "vehicle_model", "description", "source_doc"], "primary_keys": ["entity_id"], "nullable_keys": ["model_name", "year", "series", "fuel_type", "config", "vehicle_model", "description", "source_doc"]},
-    {"id": 3, "name": "VehicleSystem", "properties": ["entity_id", "system_name", "system_type", "vehicle_model", "description", "source_doc"], "primary_keys": ["entity_id"], "nullable_keys": ["system_name", "system_type", "vehicle_model", "description", "source_doc"]},
-    {"id": 4, "name": "Component", "properties": ["entity_id", "comp_name", "component_type", "location", "vehicle_model", "description", "source_doc"], "primary_keys": ["entity_id"], "nullable_keys": ["comp_name", "component_type", "location", "vehicle_model", "description", "source_doc"]},
-    {"id": 5, "name": "Function", "properties": ["entity_id", "func_name", "function_type", "trigger_condition", "alert_method", "warnings", "vehicle_model", "description", "source_doc"], "primary_keys": ["entity_id"], "nullable_keys": ["func_name", "function_type", "trigger_condition", "alert_method", "warnings", "vehicle_model", "description", "source_doc"]},
-    {"id": 6, "name": "Status", "properties": ["entity_id", "status_name", "status_type", "perceivable_way", "vehicle_model", "description", "source_doc"], "primary_keys": ["entity_id"], "nullable_keys": ["status_name", "status_type", "perceivable_way", "vehicle_model", "description", "source_doc"]},
-    {"id": 7, "name": "Fault", "properties": ["entity_id", "fault_name", "fault_type", "severity", "drivable", "risk_desc", "vehicle_model", "description", "source_doc"], "primary_keys": ["entity_id"], "nullable_keys": ["fault_name", "fault_type", "severity", "drivable", "risk_desc", "vehicle_model", "description", "source_doc"]},
-    {"id": 8, "name": "Operation", "properties": ["entity_id", "op_name", "operation_type", "difficulty", "steps", "precondition", "warnings", "vehicle_model", "description", "source_doc"], "primary_keys": ["entity_id"], "nullable_keys": ["op_name", "operation_type", "difficulty", "steps", "precondition", "warnings", "vehicle_model", "description", "source_doc"]},
-    {"id": 9, "name": "MaintenanceItem", "properties": ["entity_id", "maint_name", "item_type", "interval", "warnings", "vehicle_model", "description", "source_doc"], "primary_keys": ["entity_id"], "nullable_keys": ["maint_name", "item_type", "interval", "warnings", "vehicle_model", "description", "source_doc"]},
-    {"id": 10, "name": "Specification", "properties": ["entity_id", "spec_name", "value_text", "value_num", "unit", "condition_note", "vehicle_model", "description", "source_doc"], "primary_keys": ["entity_id"], "nullable_keys": ["spec_name", "value_text", "value_num", "unit", "condition_note", "vehicle_model", "description", "source_doc"]},
-    {"id": 11, "name": "Material", "properties": ["entity_id", "material_name", "material_type", "spec", "brand", "vehicle_model", "description", "source_doc"], "primary_keys": ["entity_id"], "nullable_keys": ["material_name", "material_type", "spec", "brand", "vehicle_model", "description", "source_doc"]},
+    {
+        "id": 1,
+        "name": "VehicleBrand",
+        "properties": ["entity_id", "brand_name", "country", "vehicle_model", "description", "source_doc"],
+        "primary_keys": ["entity_id"],
+        "nullable_keys": ["brand_name", "country", "vehicle_model", "description", "source_doc"],
+    },
+    {
+        "id": 2,
+        "name": "VehicleModel",
+        "properties": [
+            "entity_id",
+            "model_name",
+            "year",
+            "series",
+            "fuel_type",
+            "config",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+        "nullable_keys": [
+            "model_name",
+            "year",
+            "series",
+            "fuel_type",
+            "config",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+    },
+    {
+        "id": 3,
+        "name": "VehicleSystem",
+        "properties": ["entity_id", "system_name", "system_type", "vehicle_model", "description", "source_doc"],
+        "primary_keys": ["entity_id"],
+        "nullable_keys": ["system_name", "system_type", "vehicle_model", "description", "source_doc"],
+    },
+    {
+        "id": 4,
+        "name": "Component",
+        "properties": [
+            "entity_id",
+            "comp_name",
+            "component_type",
+            "location",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+        "nullable_keys": ["comp_name", "component_type", "location", "vehicle_model", "description", "source_doc"],
+    },
+    {
+        "id": 5,
+        "name": "Function",
+        "properties": [
+            "entity_id",
+            "func_name",
+            "function_type",
+            "trigger_condition",
+            "alert_method",
+            "warnings",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+        "nullable_keys": [
+            "func_name",
+            "function_type",
+            "trigger_condition",
+            "alert_method",
+            "warnings",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+    },
+    {
+        "id": 6,
+        "name": "Status",
+        "properties": [
+            "entity_id",
+            "status_name",
+            "status_type",
+            "perceivable_way",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+        "nullable_keys": [
+            "status_name",
+            "status_type",
+            "perceivable_way",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+    },
+    {
+        "id": 7,
+        "name": "Fault",
+        "properties": [
+            "entity_id",
+            "fault_name",
+            "fault_type",
+            "severity",
+            "drivable",
+            "risk_desc",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+        "nullable_keys": [
+            "fault_name",
+            "fault_type",
+            "severity",
+            "drivable",
+            "risk_desc",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+    },
+    {
+        "id": 8,
+        "name": "Operation",
+        "properties": [
+            "entity_id",
+            "op_name",
+            "operation_type",
+            "difficulty",
+            "steps",
+            "precondition",
+            "warnings",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+        "nullable_keys": [
+            "op_name",
+            "operation_type",
+            "difficulty",
+            "steps",
+            "precondition",
+            "warnings",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+    },
+    {
+        "id": 9,
+        "name": "MaintenanceItem",
+        "properties": [
+            "entity_id",
+            "maint_name",
+            "item_type",
+            "interval",
+            "warnings",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+        "nullable_keys": [
+            "maint_name",
+            "item_type",
+            "interval",
+            "warnings",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+    },
+    {
+        "id": 10,
+        "name": "Specification",
+        "properties": [
+            "entity_id",
+            "spec_name",
+            "value_text",
+            "value_num",
+            "unit",
+            "condition_note",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+        "nullable_keys": [
+            "spec_name",
+            "value_text",
+            "value_num",
+            "unit",
+            "condition_note",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+    },
+    {
+        "id": 11,
+        "name": "Material",
+        "properties": [
+            "entity_id",
+            "material_name",
+            "material_type",
+            "spec",
+            "brand",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+        "primary_keys": ["entity_id"],
+        "nullable_keys": [
+            "material_name",
+            "material_type",
+            "spec",
+            "brand",
+            "vehicle_model",
+            "description",
+            "source_doc",
+        ],
+    },
 ]
 
 EDGE_LABELS = [
-    {"name": "HAS_MODEL", "source_label": "VehicleBrand", "target_label": "VehicleModel", "properties": ["vehicle_model"]},
-    {"name": "HAS_SYSTEM", "source_label": "VehicleModel", "target_label": "VehicleSystem", "properties": ["vehicle_model"]},
-    {"name": "HAS_COMPONENT", "source_label": "VehicleModel", "target_label": "Component", "properties": ["vehicle_model"]},
-    {"name": "HAS_FUNCTION", "source_label": "VehicleModel", "target_label": "Function", "properties": ["vehicle_model"]},
-    {"name": "BELONGS_TO", "source_label": "Component", "target_label": "VehicleSystem", "properties": ["vehicle_model"]},
+    {
+        "name": "HAS_MODEL",
+        "source_label": "VehicleBrand",
+        "target_label": "VehicleModel",
+        "properties": ["vehicle_model"],
+    },
+    {
+        "name": "HAS_SYSTEM",
+        "source_label": "VehicleModel",
+        "target_label": "VehicleSystem",
+        "properties": ["vehicle_model"],
+    },
+    {
+        "name": "HAS_COMPONENT",
+        "source_label": "VehicleModel",
+        "target_label": "Component",
+        "properties": ["vehicle_model"],
+    },
+    {
+        "name": "HAS_FUNCTION",
+        "source_label": "VehicleModel",
+        "target_label": "Function",
+        "properties": ["vehicle_model"],
+    },
+    {
+        "name": "BELONGS_TO",
+        "source_label": "Component",
+        "target_label": "VehicleSystem",
+        "properties": ["vehicle_model"],
+    },
     {"name": "ACTIVATES", "source_label": "Component", "target_label": "Function", "properties": ["vehicle_model"]},
     {"name": "OPERATED_BY", "source_label": "Function", "target_label": "Operation", "properties": ["vehicle_model"]},
     {"name": "OPERATES_ON", "source_label": "Operation", "target_label": "Component", "properties": ["vehicle_model"]},
     {"name": "HAS_STATUS", "source_label": "Component", "target_label": "Status", "properties": ["vehicle_model"]},
-    {"name": "SYSTEM_HAS_STATUS", "source_label": "VehicleSystem", "target_label": "Status", "properties": ["vehicle_model"]},
+    {
+        "name": "SYSTEM_HAS_STATUS",
+        "source_label": "VehicleSystem",
+        "target_label": "Status",
+        "properties": ["vehicle_model"],
+    },
     {"name": "CAUSED_BY", "source_label": "Status", "target_label": "Fault", "properties": ["vehicle_model"]},
     {"name": "LEADS_TO", "source_label": "Fault", "target_label": "Fault", "properties": ["vehicle_model"]},
     {"name": "AFFECTS", "source_label": "Fault", "target_label": "VehicleSystem", "properties": ["vehicle_model"]},
     {"name": "RESOLVED_BY", "source_label": "Status", "target_label": "Operation", "properties": ["vehicle_model"]},
-    {"name": "FAULT_RESOLVED_BY", "source_label": "Fault", "target_label": "Operation", "properties": ["vehicle_model"]},
+    {
+        "name": "FAULT_RESOLVED_BY",
+        "source_label": "Fault",
+        "target_label": "Operation",
+        "properties": ["vehicle_model"],
+    },
     {"name": "HAS_SPEC", "source_label": "Component", "target_label": "Specification", "properties": ["vehicle_model"]},
-    {"name": "MODEL_HAS_SPEC", "source_label": "VehicleModel", "target_label": "Specification", "properties": ["vehicle_model"]},
+    {
+        "name": "MODEL_HAS_SPEC",
+        "source_label": "VehicleModel",
+        "target_label": "Specification",
+        "properties": ["vehicle_model"],
+    },
     {"name": "REQUIRES", "source_label": "Operation", "target_label": "Material", "properties": ["vehicle_model"]},
-    {"name": "APPLICABLE_TO", "source_label": "MaintenanceItem", "target_label": "VehicleModel", "properties": ["vehicle_model"]},
-    {"name": "MAINT_HAS_SPEC", "source_label": "MaintenanceItem", "target_label": "Specification", "properties": ["vehicle_model"]},
-    {"name": "MAINT_REQUIRES", "source_label": "MaintenanceItem", "target_label": "Material", "properties": ["vehicle_model"]},
+    {
+        "name": "APPLICABLE_TO",
+        "source_label": "MaintenanceItem",
+        "target_label": "VehicleModel",
+        "properties": ["vehicle_model"],
+    },
+    {
+        "name": "MAINT_HAS_SPEC",
+        "source_label": "MaintenanceItem",
+        "target_label": "Specification",
+        "properties": ["vehicle_model"],
+    },
+    {
+        "name": "MAINT_REQUIRES",
+        "source_label": "MaintenanceItem",
+        "target_label": "Material",
+        "properties": ["vehicle_model"],
+    },
 ]
 
 NAME_PROPERTY_MAP = {
-    "VehicleBrand": "brand_name", "VehicleModel": "model_name",
-    "VehicleSystem": "system_name", "Component": "comp_name",
-    "Function": "func_name", "Status": "status_name",
-    "Fault": "fault_name", "Operation": "op_name",
-    "MaintenanceItem": "maint_name", "Specification": "spec_name",
+    "VehicleBrand": "brand_name",
+    "VehicleModel": "model_name",
+    "VehicleSystem": "system_name",
+    "Component": "comp_name",
+    "Function": "func_name",
+    "Status": "status_name",
+    "Fault": "fault_name",
+    "Operation": "op_name",
+    "MaintenanceItem": "maint_name",
+    "Specification": "spec_name",
     "Material": "material_name",
 }
 
@@ -137,12 +419,12 @@ def run_convert():
     entities_path = OUTPUT_DIR / "merged_entities.json"
     relations_path = OUTPUT_DIR / "merged_relations.json"
 
-    with open(entities_path, "r", encoding="utf-8") as f:
+    with open(entities_path, encoding="utf-8") as f:
         entities = json.load(f)
-    with open(relations_path, "r", encoding="utf-8") as f:
+    with open(relations_path, encoding="utf-8") as f:
         relations = json.load(f)
 
-    print(f"输入: {len(entities)} 实体, {len(relations)} 关系")
+    logger.info("输入: %s 实体, %s 关系", len(entities), len(relations))
 
     # 转换顶点
     vertices = []
@@ -156,7 +438,7 @@ def run_convert():
         vertices.append(vertex)
         entity_id_set.add(entity["entity_id"].replace("::", "__"))
 
-    print(f"  顶点: {len(vertices)} (跳过 {skipped})")
+    logger.info("  顶点: %s (跳过 %s)", len(vertices), skipped)
 
     # 转换边
     edges = []
@@ -168,13 +450,13 @@ def run_convert():
         else:
             skipped_edges += 1
 
-    print(f"  边: {len(edges)} (跳过 {skipped_edges})")
+    logger.info("  边: %s (跳过 %s)", len(edges), skipped_edges)
 
     # 保存
     vertices_path = OUTPUT_DIR / "hugegraph_vertices.json"
     edges_path = OUTPUT_DIR / "hugegraph_edges.json"
-    vertices_path.write_text(json.dumps(vertices, ensure_ascii=False, indent=2), encoding='utf-8')
-    edges_path.write_text(json.dumps(edges, ensure_ascii=False, indent=2), encoding='utf-8')
+    vertices_path.write_text(json.dumps(vertices, ensure_ascii=False, indent=2), encoding="utf-8")
+    edges_path.write_text(json.dumps(edges, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # 保存 schema
     schema = {
@@ -183,16 +465,16 @@ def run_convert():
         "edgelabels": EDGE_LABELS,
     }
     schema_path = OUTPUT_DIR / "hugegraph_schema.json"
-    schema_path.write_text(json.dumps(schema, ensure_ascii=False, indent=2), encoding='utf-8')
+    schema_path.write_text(json.dumps(schema, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # 统计
     v_counter = Counter(v["label"] for v in vertices)
     e_counter = Counter(e["label"] for e in edges)
-    print(f"\n  顶点类型: {dict(v_counter.most_common(5))}")
-    print(f"  边类型: {dict(e_counter.most_common(5))}")
-    print(f"\n  输出: {vertices_path}")
-    print(f"  输出: {edges_path}")
-    print(f"  输出: {schema_path}")
+    logger.info("  顶点类型: %s", dict(v_counter.most_common(5)))
+    logger.info("  边类型: %s", dict(e_counter.most_common(5)))
+    logger.info("  输出: %s", vertices_path)
+    logger.info("  输出: %s", edges_path)
+    logger.info("  输出: %s", schema_path)
 
 
 def _build_property_keys():
@@ -205,4 +487,5 @@ def _build_property_keys():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     run_convert()

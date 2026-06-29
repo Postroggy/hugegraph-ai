@@ -3,16 +3,16 @@
 import json
 import logging
 from collections import Counter
-from typing import List
 
 from .phase1_candidates import get_vehicle_model
 from .settings import DisambiguationContext, make_context
 
 logger = logging.getLogger(__name__)
 
+
 def validate(
-    merged_entities: List[dict],
-    merged_relations: List[dict],
+    merged_entities: list[dict],
+    merged_relations: list[dict],
     ctx: DisambiguationContext | None = None,
 ) -> dict:
     """执行所有验证检查。"""
@@ -22,9 +22,9 @@ def validate(
     results = {}
 
     # 原始数据
-    with open(context.input_entities_path, "r", encoding="utf-8") as f:
+    with open(context.input_entities_path, encoding="utf-8") as f:
         orig_entities = json.load(f)
-    with open(context.input_relations_path, "r", encoding="utf-8") as f:
+    with open(context.input_relations_path, encoding="utf-8") as f:
         orig_relations = json.load(f)
 
     entity_ids = {e["entity_id"] for e in merged_entities}
@@ -52,8 +52,7 @@ def validate(
     # 对比原始数据的悬挂边
     orig_ids = {e["entity_id"] for e in orig_entities}
     orig_dangling = sum(
-        1 for r in orig_relations
-        if r["source_entity_id"] not in orig_ids or r["target_entity_id"] not in orig_ids
+        1 for r in orig_relations if r["source_entity_id"] not in orig_ids or r["target_entity_id"] not in orig_ids
     )
     total_dangling = dangling_src + dangling_tgt
     results["dangling_edges"] = total_dangling
@@ -135,11 +134,10 @@ if __name__ == "__main__":
     entities_path = context.merged_entities_path
     relations_path = context.merged_relations_path
     if not entities_path.exists():
-        print("请先运行 Phase 3")
-        exit(1)
-    with open(entities_path, "r") as f:
+        raise SystemExit("请先运行 Phase 3")
+    with open(entities_path) as f:
         entities = json.load(f)
-    with open(relations_path, "r") as f:
+    with open(relations_path) as f:
         relations = json.load(f)
     results = validate(entities, relations, context)
-    print(f"\n验证完成: {'✅ 全部通过' if results['all_pass'] else '⚠️ 部分失败'}")
+    logger.info("验证完成: %s", "全部通过" if results["all_pass"] else "部分失败")

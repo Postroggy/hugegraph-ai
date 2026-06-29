@@ -11,15 +11,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
-import shutil
-import sys
 import time
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
+logger = logging.getLogger(__name__)
 
 ENTITY_NAME_PROPS = {
     "VehicleBrand": "brand_name",
@@ -104,21 +104,123 @@ BRAND_HINTS = {
     "五十铃": ["五十铃", "翼放"],
     "捷豹路虎": ["路虎", "神行者"],
     "广汽传祺": ["传祺", "祺智"],
-    "福特": ["福特", "EVOS", "F-150", "Mustang", "探险者", "烈马", "电马", "福睿斯", "福克斯", "蒙迪欧", "锐界", "锐际", "领界", "领裕", "翼搏", "翼虎"],
-    "丰田": ["丰田", "Toyota", "Aygo", "C-HR", "RAV4", "YARiS", "HIACE", "MIRAI", "SUPRA", "普拉多", "普锐斯", "普瑞维亚", "埃尔法", "亚洲狮", "汉兰达", "凯美瑞", "皇冠", "威尔法", "考斯特"],
+    "福特": [
+        "福特",
+        "EVOS",
+        "F-150",
+        "Mustang",
+        "探险者",
+        "烈马",
+        "电马",
+        "福睿斯",
+        "福克斯",
+        "蒙迪欧",
+        "锐界",
+        "锐际",
+        "领界",
+        "领裕",
+        "翼搏",
+        "翼虎",
+    ],
+    "丰田": [
+        "丰田",
+        "Toyota",
+        "Aygo",
+        "C-HR",
+        "RAV4",
+        "YARiS",
+        "HIACE",
+        "MIRAI",
+        "SUPRA",
+        "普拉多",
+        "普锐斯",
+        "普瑞维亚",
+        "埃尔法",
+        "亚洲狮",
+        "汉兰达",
+        "凯美瑞",
+        "皇冠",
+        "威尔法",
+        "考斯特",
+    ],
     "别克": ["别克", "GL8", "世纪", "君威", "凯越", "昂科威", "昂科拉", "昂科旗", "昂科雷", "林荫大道"],
     "奥迪": ["奥迪", "Audi", "A5", "A6", "A8", "Q3", "Q5", "Q6"],
     "广汽埃安": ["AION", "埃安"],
     "奔驰": ["奔驰", "AMG", "Mercedes", "EQB", "EQE", "EQS", "GLB", "CLA", "CLS", "CLE", "A级", "E级", "v-class"],
-    "日产": ["日产", "Nissan", "ARIYA", "Altima", "GT-R", "Lannia", "Murano", "NV200", "Note", "Quest", "Tiida", "X-Trail", "轩逸"],
+    "日产": [
+        "日产",
+        "Nissan",
+        "ARIYA",
+        "Altima",
+        "GT-R",
+        "Lannia",
+        "Murano",
+        "NV200",
+        "Note",
+        "Quest",
+        "Tiida",
+        "X-Trail",
+        "轩逸",
+    ],
     "林肯": ["林肯", "Lincoln", "Aviator", "Corsair", "MKC", "MKX", "MKZ", "Nautilus", "Navigator", "Zephyr"],
-    "本田": ["本田", "Honda", "CR-V", "CIIMO", "LIFE", "VE-1", "HR-V", "XR-V", "杰德", "歌诗图", "皓影", "缤智", "极湃"],
+    "本田": [
+        "本田",
+        "Honda",
+        "CR-V",
+        "CIIMO",
+        "LIFE",
+        "VE-1",
+        "HR-V",
+        "XR-V",
+        "杰德",
+        "歌诗图",
+        "皓影",
+        "缤智",
+        "极湃",
+    ],
     "保时捷": ["保时捷", "Porsche", "Boxster", "Cayenne", "Cayman", "Macan", "Panamera", "Taycan"],
     "凯迪拉克": ["凯迪拉克", "Cadillac", "CT5", "XT6", "SLS", "IQ锐歌"],
     "马自达": ["马自达", "Mazda", "CX-3", "CX-4", "Mazda6", "Mazda8"],
     "哈弗": ["哈弗", "H2", "H4", "H5", "H6", "H7", "Dagou", "大狗", "神兽", "枭龙"],
-    "比亚迪": ["比亚迪", "BYD", "F0", "F3", "F3R", "F6", "G3", "G3R", "G5", "G6", "M6", "S6", "e2", "e6", "宋MAX", "汉", "海狮", "海豚", "海豹", "海鸥", "秦"],
-    "大众": ["大众", "Volkswagen", "CC", "ID.4", "ID.6", "Magotan", "Polo", "T-ROC", "迈腾", "朗逸", "朗行", "朗境", "桑塔纳", "甲壳虫"],
+    "比亚迪": [
+        "比亚迪",
+        "BYD",
+        "F0",
+        "F3",
+        "F3R",
+        "F6",
+        "G3",
+        "G3R",
+        "G5",
+        "G6",
+        "M6",
+        "S6",
+        "e2",
+        "e6",
+        "宋MAX",
+        "汉",
+        "海狮",
+        "海豚",
+        "海豹",
+        "海鸥",
+        "秦",
+    ],
+    "大众": [
+        "大众",
+        "Volkswagen",
+        "CC",
+        "ID.4",
+        "ID.6",
+        "Magotan",
+        "Polo",
+        "T-ROC",
+        "迈腾",
+        "朗逸",
+        "朗行",
+        "朗境",
+        "桑塔纳",
+        "甲壳虫",
+    ],
     "特斯拉": ["Tesla", "Model 3", "Model S", "Model X", "Model Y"],
     "上汽大通": ["上汽大通", "MAXUS", "大通"],
     "五菱": ["五菱", "宏光", "凯捷", "佳辰"],
@@ -187,15 +289,15 @@ def is_list_line(line: str) -> bool:
 
 
 def is_toc_like(text: str) -> bool:
-    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
     td_numbers = len(re.findall(r"<td>\s*\d{1,3}\s*</td>", text))
     td_page_refs = len(re.findall(r"第\s*\d+\s*页", text))
     if "<table" in text and re.search(r"(目录|概览|检索|索引)", text[:300]) and td_numbers + td_page_refs >= 6:
         return True
-    if sum(1 for l in lines if l.startswith("# ")) > 8:
+    if sum(1 for line in lines if line.startswith("# ")) > 8:
         return True
-    page_refs = sum(1 for l in lines if re.search(r"(第\s*\d+\s*页|\s+\d{1,3}$)", l))
-    short_refs = sum(1 for l in lines if len(l) <= 28 and re.search(r"(\.{2,}|·+|\s)\d{1,3}$", l))
+    page_refs = sum(1 for line in lines if re.search(r"(第\s*\d+\s*页|\s+\d{1,3}$)", line))
+    short_refs = sum(1 for line in lines if len(line) <= 28 and re.search(r"(\.{2,}|·+|\s)\d{1,3}$", line))
     if len(lines) >= 6 and (page_refs + short_refs) / max(1, len(lines)) > 0.35:
         return True
     return len(lines) > 20 and page_refs / max(1, len(lines)) > 0.55
@@ -299,7 +401,7 @@ def split_large_block(block: dict[str, Any]) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
         buf: list[str] = []
         for line in lines:
-            candidate = "\n".join(buf + [line])
+            candidate = "\n".join([*buf, line])
             if buf and len(candidate) > MAX_CHARS:
                 item = dict(block)
                 item["text"] = "\n".join(buf).strip()
@@ -436,7 +538,9 @@ def ensure_scope_map() -> dict[str, Any]:
     manifest = load_manifest(out_dir)
     existing = json.loads(scope_path.read_text(encoding="utf-8")) if scope_path.exists() else {}
     review_needed = json.loads(review_path.read_text(encoding="utf-8")) if review_path.exists() else []
-    review_by_doc = {item.get("doc_name") or item.get("source_doc_name"): item for item in review_needed if isinstance(item, dict)}
+    review_by_doc = {
+        item.get("doc_name") or item.get("source_doc_name"): item for item in review_needed if isinstance(item, dict)
+    }
     changed = False
     for item in manifest:
         doc_name = item["source_doc_name"]
@@ -452,7 +556,11 @@ def ensure_scope_map() -> dict[str, Any]:
                 changed = True
                 review_by_doc.pop(doc_name, None)
         if existing[doc_name].get("confidence") != "high" and doc_name not in review_by_doc:
-            review_by_doc[doc_name] = {"doc_name": doc_name, **existing[doc_name], "reason": "low confidence vehicle scope"}
+            review_by_doc[doc_name] = {
+                "doc_name": doc_name,
+                **existing[doc_name],
+                "reason": "low confidence vehicle scope",
+            }
     if changed:
         atomic_write_json(scope_path, existing)
     atomic_write_json(review_path, list(review_by_doc.values()))
@@ -460,7 +568,7 @@ def ensure_scope_map() -> dict[str, Any]:
 
 
 def risk_for_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
-    text = f"{chunk.get('heading_path','')}\n{chunk.get('text','')}"
+    text = f"{chunk.get('heading_path', '')}\n{chunk.get('text', '')}"
     score = 0
     reasons: list[str] = []
 
@@ -533,7 +641,7 @@ def prepare_chunks(args: argparse.Namespace) -> None:
         atomic_write_json(chunks_path, chunks)
         atomic_write_json(out_dir / "semantic_chunks" / f"{item['doc_run_id']}.chunks.json", chunks)
         task_summary.append({"doc_run_id": item["doc_run_id"], "chunks": len(chunks), "chunks_path": str(chunks_path)})
-        print(f"prepared {item['doc_run_id']}: chunks={len(chunks)}")
+        logger.info("prepared %s: chunks=%s", item["doc_run_id"], len(chunks))
     atomic_write_json(out_dir / "analysis" / "last_prepare_chunks.json", task_summary)
 
 
@@ -547,7 +655,7 @@ def classify_risk(args: argparse.Namespace) -> None:
         doc_run_dir = Path(item["doc_run_dir"])
         chunks_path = doc_run_dir / "chunks" / "chunks.json"
         if not chunks_path.exists():
-            print(f"missing chunks, skip: {item['doc_run_id']}", file=sys.stderr)
+            logger.warning("missing chunks, skip: %s", item["doc_run_id"])
             continue
         chunks = json.loads(chunks_path.read_text(encoding="utf-8"))
         risks = [risk_for_chunk(c) for c in chunks]
@@ -563,7 +671,7 @@ def classify_risk(args: argparse.Namespace) -> None:
         atomic_write_json(doc_run_dir / "chunks" / "risk.json", out)
         atomic_write_json(out_dir / "risk_classification" / f"{item['doc_run_id']}.risk.json", out)
         docs.append(out)
-        print(f"risk {item['doc_run_id']}: {out['risk_counts']} -> {doc_flow}")
+        logger.info("risk %s: %s -> %s", item["doc_run_id"], out["risk_counts"], doc_flow)
     atomic_write_json(out_dir / "analysis" / "last_risk_classification.json", docs)
 
 
@@ -578,10 +686,14 @@ def init_doc_state(args: argparse.Namespace) -> None:
         chunks_path = doc_run_dir / "chunks" / "chunks.json"
         risk_path = doc_run_dir / "chunks" / "risk.json"
         if not chunks_path.exists():
-            print(f"missing chunks, skip state: {item['doc_run_id']}", file=sys.stderr)
+            logger.warning("missing chunks, skip state: %s", item["doc_run_id"])
             continue
         chunks = json.loads(chunks_path.read_text(encoding="utf-8"))
-        risk = json.loads(risk_path.read_text(encoding="utf-8")) if risk_path.exists() else {"recommended_doc_flow": "single_agent_self_review"}
+        risk = (
+            json.loads(risk_path.read_text(encoding="utf-8"))
+            if risk_path.exists()
+            else {"recommended_doc_flow": "single_agent_self_review"}
+        )
         scope = scope_map.get(item["source_doc_name"], infer_scope(item["source_doc_name"]))
         state = {
             "doc_run_id": item["doc_run_id"],
@@ -593,8 +705,7 @@ def init_doc_state(args: argparse.Namespace) -> None:
             "chunk_ids": [c["chunk_id"] for c in chunks],
             "recommended_doc_flow": risk.get("recommended_doc_flow", "single_agent_self_review"),
             "chunk_review_policy": {
-                r["chunk_id"]: r.get("recommended_flow", "self_review")
-                for r in risk.get("chunks", [])
+                r["chunk_id"]: r.get("recommended_flow", "self_review") for r in risk.get("chunks", [])
             },
             "current_index": 0,
             "current_chunk": chunks[0]["chunk_id"] if chunks else None,
@@ -613,7 +724,7 @@ def init_doc_state(args: argparse.Namespace) -> None:
             "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         }
         atomic_write_json(doc_run_dir / "state" / "state.json", state)
-        print(f"state {item['doc_run_id']}: {state['recommended_doc_flow']} chunks={len(chunks)}")
+        logger.info("state %s: %s chunks=%s", item["doc_run_id"], state["recommended_doc_flow"], len(chunks))
 
 
 def normalize_entity(raw: dict[str, Any], scope: dict[str, str], fallback: dict[str, Any]) -> dict[str, Any] | None:
@@ -625,7 +736,12 @@ def normalize_entity(raw: dict[str, Any], scope: dict[str, str], fallback: dict[
     etype = entity.get("type")
     props = entity.get("properties") if isinstance(entity.get("properties"), dict) else {}
     for key, value in list(entity.items()):
-        if key not in {"type", "label", "entity_type", "name", "aliases", "properties", "entity_id"} and value not in (None, "", [], {}):
+        if key not in {"type", "label", "entity_type", "name", "aliases", "properties", "entity_id"} and value not in (
+            None,
+            "",
+            [],
+            {},
+        ):
             props.setdefault(key, value)
     name_prop = ENTITY_NAME_PROPS.get(etype)
     if not entity.get("name") and name_prop and props.get(name_prop):
@@ -644,7 +760,9 @@ def normalize_entity(raw: dict[str, Any], scope: dict[str, str], fallback: dict[
     return entity
 
 
-def normalize_relation(raw: dict[str, Any], scope: dict[str, str], fallback: dict[str, Any], entity_by_id: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
+def normalize_relation(
+    raw: dict[str, Any], scope: dict[str, str], fallback: dict[str, Any], entity_by_id: dict[str, dict[str, Any]]
+) -> dict[str, Any] | None:
     rel = dict(raw)
     if "type" not in rel and rel.get("label"):
         rel["type"] = rel["label"]
@@ -701,13 +819,26 @@ def merge_doc_raw(args: argparse.Namespace) -> None:
                 errors.append(f"bad final json {fp}: {exc}")
                 continue
             chunk_results.append(data)
-            fallback = {k: data.get(k) for k in ("chunk_id", "heading_path", "source_section", "line_start", "line_end", "source_snippet", "evidence")}
+            fallback = {
+                k: data.get(k)
+                for k in (
+                    "chunk_id",
+                    "heading_path",
+                    "source_section",
+                    "line_start",
+                    "line_end",
+                    "source_snippet",
+                    "evidence",
+                )
+            }
             entity_by_id = {}
             chunk_entities = []
             for raw_e in data.get("entities", []) or []:
                 ent = normalize_entity(raw_e, scope, fallback)
                 if not ent:
-                    errors.append(f"{fp.name}: invalid entity {raw_e.get('type') or raw_e.get('label')} {raw_e.get('name')}")
+                    errors.append(
+                        f"{fp.name}: invalid entity {raw_e.get('type') or raw_e.get('label')} {raw_e.get('name')}"
+                    )
                     continue
                 chunk_entities.append(ent)
                 if ent.get("entity_id"):
@@ -732,8 +863,23 @@ def merge_doc_raw(args: argparse.Namespace) -> None:
         task_path = out_dir / "doc_raw_results" / f"{item['doc_run_id']}.raw.json"
         atomic_write_json(local_path, raw)
         atomic_write_json(task_path, raw)
-        summaries.append({"doc_run_id": item["doc_run_id"], "final_chunks": len(finals), "entities": len(entities), "relations": len(relations), "errors": errors})
-        print(f"merged {item['doc_run_id']}: finals={len(finals)} entities={len(entities)} relations={len(relations)} errors={len(errors)}")
+        summaries.append(
+            {
+                "doc_run_id": item["doc_run_id"],
+                "final_chunks": len(finals),
+                "entities": len(entities),
+                "relations": len(relations),
+                "errors": errors,
+            }
+        )
+        logger.info(
+            "merged %s: finals=%s entities=%s relations=%s errors=%s",
+            item["doc_run_id"],
+            len(finals),
+            len(entities),
+            len(relations),
+            len(errors),
+        )
     atomic_write_json(out_dir / "analysis" / "last_merge_doc_raw.json", summaries)
 
 
@@ -777,8 +923,17 @@ def validate_doc_raw(args: argparse.Namespace) -> None:
         status = "ok" if not errors else "partial"
         validated = {**raw, "validation_status": status, "validation_errors": errors}
         atomic_write_json(out_dir / "validated_results" / f"{item['doc_run_id']}.validated.json", validated)
-        summaries.append({"doc_run_id": item["doc_run_id"], "status": status, "entity_count": len(entities), "relation_count": len(relations), "error_count": len(errors), "errors": errors[:50]})
-        print(f"validated {item['doc_run_id']}: {status} errors={len(errors)}")
+        summaries.append(
+            {
+                "doc_run_id": item["doc_run_id"],
+                "status": status,
+                "entity_count": len(entities),
+                "relation_count": len(relations),
+                "error_count": len(errors),
+                "errors": errors[:50],
+            }
+        )
+        logger.info("validated %s: %s errors=%s", item["doc_run_id"], status, len(errors))
     atomic_write_json(out_dir / "analysis" / "validation_summary.json", summaries)
 
 
@@ -816,15 +971,17 @@ def summarize_progress(_args: argparse.Namespace) -> None:
             completed += 1
         if doc_blocked:
             blocked_docs += 1
-        rows.append({
-            "doc_run_id": item["doc_run_id"],
-            "chunks": len(chunks),
-            "finals": len(finals),
-            "validated": validated.exists(),
-            "blocked_chunks": len(chunk_blocked),
-            "doc_blocked": doc_blocked,
-            "phase": state.get("phase") if state else None,
-        })
+        rows.append(
+            {
+                "doc_run_id": item["doc_run_id"],
+                "chunks": len(chunks),
+                "finals": len(finals),
+                "validated": validated.exists(),
+                "blocked_chunks": len(chunk_blocked),
+                "doc_blocked": doc_blocked,
+                "phase": state.get("phase") if state else None,
+            }
+        )
     progress = {
         "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         "total_docs": total_docs,
@@ -838,7 +995,7 @@ def summarize_progress(_args: argparse.Namespace) -> None:
     }
     atomic_write_json(out_dir / "analysis" / "progress.json", progress)
     report = [
-        f"# Progress Report",
+        "# Progress Report",
         "",
         f"- Updated: {progress['updated_at']}",
         f"- Total docs: {total_docs}",
@@ -851,7 +1008,7 @@ def summarize_progress(_args: argparse.Namespace) -> None:
         "",
     ]
     (out_dir / "analysis" / "progress_report.md").write_text("\n".join(report), encoding="utf-8")
-    print(json.dumps({k: progress[k] for k in progress if k != "docs"}, ensure_ascii=False, indent=2))
+    logger.info("%s", json.dumps({k: progress[k] for k in progress if k != "docs"}, ensure_ascii=False, indent=2))
 
 
 def select_manifest(manifest: list[dict[str, Any]], limit: int | None, doc_run_id: str | None) -> list[dict[str, Any]]:
@@ -864,9 +1021,18 @@ def select_manifest(manifest: list[dict[str, Any]], limit: int | None, doc_run_i
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     parser = argparse.ArgumentParser(description="Task-local GraphRAG extraction utility")
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ["scope", "prepare_chunks", "classify_risk", "init_state", "merge_doc_raw", "validate_doc_raw", "summarize"]:
+    for name in [
+        "scope",
+        "prepare_chunks",
+        "classify_risk",
+        "init_state",
+        "merge_doc_raw",
+        "validate_doc_raw",
+        "summarize",
+    ]:
         p = sub.add_parser(name)
         p.add_argument("--limit", type=int)
         p.add_argument("--doc-run-id")
@@ -876,7 +1042,7 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "scope":
         scope = ensure_scope_map()
-        print(f"scope entries: {len(scope)}")
+        logger.info("scope entries: %s", len(scope))
     elif args.command == "prepare_chunks":
         prepare_chunks(args)
     elif args.command == "classify_risk":
