@@ -4,7 +4,18 @@
 
 ## 为什么单独放转换层
 
-抽取流程输出的是 raw 图谱事实：
+抽取流程输出的是 raw 图谱事实；如果需要实体消歧，应先运行
+`car_graph_pipeline.disambiguation`，再把消歧后的 `merged_entities.json` 和
+`merged_relations.json` 交给本模块转换：
+
+```text
+extracted_entities/extracted_relations
+-> disambiguation
+-> merged_entities/merged_relations
+-> convert
+```
+
+原始抽取输出形如：
 
 ```json
 {
@@ -27,4 +38,3 @@ HugeGraph 导入需要带 label、id、端点和 properties 的 vertex/edge 结�
 这些转换脚本仍保留了原 `/Users/lzj/proj/car_graph/car_graph_pipeline`
 工作区中的部分路径和假设。将它们作为 HugeGraph AI 下的生产 CLI 使用前，
 需要先参数化输入/输出路径，并与最终采用的车型作用域 schema 对齐。
-

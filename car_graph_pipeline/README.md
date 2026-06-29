@@ -12,6 +12,7 @@ car_graph_pipeline/
   extraction/
     llm_api/       # LLM API 抽取方案；原始文档和输出都是本地运行时文件
     codex_agent/   # Codex-agent 抽取方案代码和 prompt
+  disambiguation/  # 离线实体消歧；处理本地抽取 JSON，不直接写图
   convert/         # raw 抽取结果转 HugeGraph 顶点/边格式
 ```
 
@@ -41,6 +42,25 @@ API 驱动抽取方案，包含：
 ```
 
 它不会直接写入 HugeGraph。
+
+## 实体消歧
+
+`disambiguation/` 是抽取后、导入 HugeGraph 前的离线实体消歧流程。它读取本地
+`extracted_entities.json` 和 `extracted_relations.json`，输出
+`merged_entities.json` 和 `merged_relations.json`。
+
+推荐运行顺序：
+
+```text
+extraction/llm_api 或 extraction/codex_agent
+-> disambiguation
+-> convert/to_hugegraph_v2.py
+-> HugeGraph 导入
+```
+
+消歧候选按 `(实体类型, vehicle_model)` 分组，优先使用实体属性里的
+`vehicle_model`，兜底兼容旧版 `entity_id` 中的车型，避免跨车型合并。
+它不会访问或修改 HugeGraph。
 
 为保证提交包干净，复制过来的 `md_output/`、`output/` 和
 `output_benchmark/` 产物已经从本包清理。源数据仍保留在原
