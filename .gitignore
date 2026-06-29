@@ -173,7 +173,6 @@ codeium-instructions.md
 # Environments
 .env
 .env.bak
-config.local.yaml
 .venv
 .vscode
 .cursor
@@ -182,14 +181,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
-# Car Graph generated extraction artifacts
-car_graph_pipeline/extraction/llm_api/md_output/*
-!car_graph_pipeline/extraction/llm_api/md_output/README.md
-car_graph_pipeline/extraction/llm_api/output/*
-!car_graph_pipeline/extraction/llm_api/output/README.md
-car_graph_pipeline/extraction/llm_api/output_benchmark/
-car_graph_pipeline/output/
 
 # Spyder project settings
 .spyderproject
