@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HugeGraph GraphRAG Benchmark —— 面试演示</title>
+<style>
+  :root{
+    --bg:#f7f8fa; --panel:#ffffff; --ink:#1a2233; --sub:#5a6478; --line:#e3e6ee;
+    --brand:#2b5cff; --brand-soft:#eaf0ff; --green:#16a34a; --green-soft:#e6f6ec;
+    --red:#dc2626; --red-soft:#fdeaea; --amber:#d97706; --amber-soft:#fdf3e2;
+    --code:#f2f4f8; --radius:10px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:14px;line-height:1.55}
+  .layout{display:flex;min-height:100vh}
+  /* sidebar */
+  .side{width:248px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);
+    position:sticky;top:0;height:100vh;overflow-y:auto;padding:18px 12px}
+  .side h1{font-size:15px;margin:4px 8px 2px}
+  .side .ver{font-size:11px;color:var(--sub);margin:0 8px 14px}
+  .side a{display:block;padding:6px 10px;border-radius:7px;color:var(--sub);text-decoration:none;
+    font-size:13px;margin:1px 0}
+  .side a:hover{background:var(--brand-soft);color:var(--brand)}
+  .side a.active{background:var(--brand-soft);color:var(--brand);font-weight:600}
+  .side .grp{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9aa3b5;
+    margin:14px 10px 4px;font-weight:700}
+  /* main */
+  .main{flex:1;min-width:0;max-width:1080px;margin:0 auto;padding:28px 36px 80px}
+  section{display:block;scroll-margin-top:20px;padding-top:10px;border-top:1px solid transparent}
+  section + section{margin-top:34px;padding-top:26px;border-top-color:var(--line)}
+  section:first-child{border-top:none;padding-top:0;margin-top:0}
+  h2{font-size:22px;margin:0 0 4px;border-bottom:2px solid var(--brand);padding-bottom:8px}
+  h3{font-size:16px;margin:24px 0 8px}
+  h4{font-size:14px;margin:16px 0 6px;color:var(--sub)}
+  p{margin:8px 0}
+  .lead{color:var(--sub);font-size:13.5px;margin:0 0 18px}
+  .speak{background:#fffbea;border-left:3px solid var(--amber);padding:10px 14px;border-radius:6px;
+    margin:12px 0;font-size:13px}
+  .speak b{color:var(--amber)}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:12.8px;background:var(--panel)}
+  th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+  th{background:#f0f2f7;font-weight:600}
+  tr:nth-child(even) td{background:#fbfcfe}
+  code{font-family:var(--mono);background:var(--code);padding:1px 5px;border-radius:4px;font-size:12px}
+  pre{background:#0d1117;color:#e6edf3;padding:13px 15px;border-radius:8px;overflow-x:auto;font-size:12px;line-height:1.5}
+  pre code{background:none;color:inherit;padding:0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;margin:12px 0}
+  .grid{display:grid;gap:12px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:12px 14px;text-align:center}
+  .stat .n{font-size:22px;font-weight:700;color:var(--brand)}
+  .stat .l{font-size:11.5px;color:var(--sub);margin-top:2px}
+  .pill{display:inline-block;padding:1px 8px;border-radius:11px;font-size:11px;font-weight:600}
+  .p-ok{background:var(--green-soft);color:var(--green)}
+  .p-bad{background:var(--red-soft);color:var(--red)}
+  .p-llm{background:#ede9fe;color:#6d28d9}
+  .p-off{background:#e0f2fe;color:#0369a1}
+  .p-warn{background:var(--amber-soft);color:var(--amber)}
+  .tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:11px;background:var(--brand-soft);color:var(--brand);font-weight:600;margin-right:4px}
+  .delta-up{color:var(--green);font-weight:600}
+  .delta-dn{color:var(--red);font-weight:600}
+  .bar-wrap{background:#eef0f5;border-radius:4px;height:8px;overflow:hidden;margin:3px 0}
+  .bar{height:100%;background:var(--brand);border-radius:4px}
+  ul,ol{margin:8px 0;padding-left:22px}
+  li{margin:3px 0}
+  .small{font-size:12px;color:var(--sub)}
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:12px 0}
+  .flow .node{background:var(--panel);border:1.5px solid var(--brand);border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:600}
+  .flow .node.alt{border-color:var(--green);color:var(--green)}
+  .flow .arrow{color:var(--sub);font-size:18px}
+  .kbd{font-family:var(--mono);background:#eef0f5;border:1px solid var(--line);border-bottom-width:2px;
+    border-radius:5px;padding:1px 6px;font-size:12px}
+  .check{color:var(--green);font-weight:700}
+  details{margin:8px 0}
+  summary{cursor:pointer;font-weight:600;color:var(--brand);font-size:13px}
+  .compare-cell b{font-weight:700}
+  .footnote{font-size:11.5px;color:var(--sub);border-top:1px dashed var(--line);padding-top:8px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="layout">
+  <!-- SIDEBAR -->
+  <nav class="side">
+    <h1>GraphRAG Benchmark</h1>
+    <p class="ver">面试演示 · Issue #75 · feat/graphrag-benchmark-issue7</p>
+    <div class="grp">开场</div>
+    <a href="#intro" class="active">0 · 一句话开场</a>
+    <a href="#why">1 · 为什么做这个</a>
+    <div class="grp">验收对照</div>
+    <a href="#checklist">2 · 12 项验收逐条对照</a>
+    <div class="grp">系统设计</div>
+    <a href="#arch">3 · 架构与闭环</a>
+    <a href="#flow">4 · 真实迭代闭环演示</a>
+    <div class="grp">指标体系</div>
+    <a href="#metric-extract">5 · 图抽取指标(9)</a>
+    <a href="#metric-retrieve">6 · 召回指标(6)</a>
+    <a href="#metric-answer">7 · 答案指标(6)</a>
+    <a href="#metric-principle">8 · 指标原理与归一化</a>
+    <div class="grp">工程能力</div>
+    <a href="#robust">9 · 鲁棒性 4 层</a>
+    <a href="#repro">10 · 可复现性</a>
+    <a href="#tiered">11 · 难度分层</a>
+    <a href="#concurrent">12 · 并发</a>
+    <a href="#i18n">13 · 中英文</a>
+    <div class="grp">真实数据</div>
+    <a href="#data">14 · 数据集与规模</a>
+    <a href="#results">15 · 真实实验结果</a>
+    <div class="grp">收尾</div>
+    <a href="#extend">16 · 扩展指南</a>
+    <a href="#issues">17 · ⚠ 发现的待商榷点</a>
+    <a href="#wrap">18 · 收尾与话术</a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+  <!-- 0 -->
+  <section id="intro" class="active">
+    <h2>0 · 一句话开场</h2>
+    <p class="lead">给面试官的第一句话要精准、不啰嗦。</p>
+    <div class="speak"><b>开口说：</b>「我为 HugeGraph-LLM 的 GraphRAG 能力做了一套<b>轻量、可复现、中文友好</b>的评测系统，覆盖<b>图抽取、召回、答案</b>三个环节共 <b>21 个指标</b>，能跑离线评测也能接 LLM-Judge，并且能保存 baseline、做版本对比、定位到具体退化样例——完整对应上游 Issue #75 的 12 项验收，全部满足并超额。」</div>
+
+    <h3>三个钩子（挑一个展开）</h3>
+    <div class="grid g3">
+      <div class="card"><b>① GraphRAG 特有</b><p class="small">通用 RAG 框架（RAGAS/DeepEval）只评检索和生成，<b>不评图抽取</b>。我补齐了 entity/triple/property/schema 共 9 个抽取指标——这是 GraphRAG 区别于普通 RAG 的核心。</p></div>
+      <div class="card"><b>② 不强依赖 LLM</b><p class="small">Issue 明确要求"基础评测不强依赖外部 LLM"。我做的指标里 <b>14 个纯离线</b>，加 <code>--offline</code> 一行命令跑完，不调任何 API。</p></div>
+      <div class="card"><b>③ 能定位退化样例</b><p class="small">不只给平均分。改完代码 compare 一下，直接告诉你 <b>哪几个样本退化了、退化了多少</b>，附在每个指标上的 delta。</p></div>
+    </div>
+
+    <h3>演示路线（30 分钟版）</h3>
+    <div class="flow">
+      <span class="node">为什么做</span><span class="arrow">→</span>
+      <span class="node">验收对照</span><span class="arrow">→</span>
+      <span class="node">架构闭环</span><span class="arrow">→</span>
+      <span class="node">挑 2 个指标讲原理</span><span class="arrow">→</span>
+      <span class="node">真实数据演示</span><span class="arrow">→</span>
+      <span class="node">工程亮点</span><span class="arrow">→</span>
+      <span class="node alt">诚实讲不足</span>
+    </div>
+    <p class="small">建议每屏停留 2–3 分钟，重点放在「验收对照」「真实迭代闭环演示」「指标原理」三节。</p>
+  </section>
+
+  <!-- 1 -->
+  <section id="why">
+    <h2>1 · 为什么需要这个 benchmark</h2>
+    <div class="speak"><b>背景痛点（Issue 原话转述）：</b>「修改图抽取流程、prompt、召回策略、rerank 逻辑、上下文构造或回答生成逻辑后，很难判断效果是否真的变好，也不容易发现具体退化样例。」</div>
+
+    <h3>一句话价值主张</h3>
+    <p>把"我改了代码 → 效果到底变好没"这个本来靠人眼读输出、靠感觉判断的过程，<b>变成可量化、可对比、可定位</b>的工程动作。</p>
+
+    <h3>Issue 的硬约束（这些都是我设计时的红线）</h3>
+    <table>
+      <tr><th>约束</th><th>含义</th><th>我怎么落地</th></tr>
+      <tr><td>轻量</td><td>不引入重框架</td><td>不依赖 RAGAS/DeepEval，自建内核，纯 stdlib + jieba/opencc/rouge_score</td></tr>
+      <tr><td>可复现</td><td>同输入同结果</td><td>离线确定性 + baseline 全量持久化 + git_commit/timestamp/seed 元数据</td></tr>
+      <tr><td>中文友好</td><td>中文场景不能掉分</td><td>全角半角统一、繁简转换、中文标点、jieba 分词、双语 Judge prompt</td></tr>
+      <tr><td>不强依赖 LLM</td><td>基础评测离线可跑</td><td>21 指标中 14 个纯离线；<code>--offline</code> 跳过所有 LLM-Judge</td></tr>
+      <tr><td>覆盖抽取+召回</td><td>GraphRAG 两端都要</td><td>9 抽取 + 6 召回（+ 6 答案超额项）</td></tr>
+    </table>
+
+    <h3>调研结论（验收项 #1）</h3>
+    <table>
+      <tr><th>框架</th><th>借鉴点</th><th>不直接用的原因</th></tr>
+      <tr><td>RAGAS</td><td>指标定义、prompt 风格</td><td>核心指标强依赖 LLM-as-Judge；英文为主；无图抽取维度</td></tr>
+      <tr><td>DeepEval</td><td>CI/CD 友好</td><td>pytest 测试用例范式，非 CLI 批跑；无图抽取维度</td></tr>
+      <tr><td>ARES</td><td>无监督思路</td><td>研究导向，工程化弱；指标少</td></tr>
+      <tr><td>TruLens</td><td>feedback 机制</td><td>定位是运行时追踪，非批跑 benchmark</td></tr>
+      <tr><td>GraphRAG-Bench</td><td>任务难度分层、JSON 自愈解析</td><td>评端到端 pipeline，非组件级；无抽取质量细分</td></tr>
+    </table>
+    <p class="small"><b>结论：</b>借鉴设计、自建轻量内核。理由：上述框架都不评测"图抽取质量"（vertex/edge/property/schema），而这正是 GraphRAG 区别于普通 RAG 的核心。</p>
+  </section>
+
+  <!-- 2 CHECKLIST -->
+  <section id="checklist">
+    <h2>2 · Issue #75 的 12 项验收，逐条对照</h2>
+    <p class="lead">这是面试官最可能追问的"完成度"问题。一屏讲完，<b>12/12 全绿</b>。</p>
+    <table>
+      <tr><th>#</th><th>验收要求</th><th>状态</th><th>交付物（可点开讲）</th></tr>
+      <tr><td>1</td><td>调研已有方案并说明利弊</td><td><span class="pill p-ok">✓</span></td><td>调研 5 家，选型理由见上节</td></tr>
+      <tr><td>2</td><td>命令行可运行</td><td><span class="pill p-ok">✓</span></td><td><code>hugegraph-benchmark run/compare</code>，4 种 mode</td></tr>
+      <tr><td>3</td><td>评估图抽取质量（完整性+正确性）</td><td><span class="pill p-ok">✓</span></td><td>9 个 extraction 指标</td></tr>
+      <tr><td>4</td><td>评估召回质量</td><td><span class="pill p-ok">✓</span></td><td>6 个 retrieval 指标</td></tr>
+      <tr><td>5</td><td>可保存运行结果作为 baseline</td><td><span class="pill p-ok">✓</span></td><td><code>--save-baseline</code> + git_commit/timestamp 元数据</td></tr>
+      <tr><td>6</td><td>可比较 baseline / candidate / 参考答案</td><td><span class="pill p-ok">✓</span></td><td><code>compare</code> 子命令，三方对照</td></tr>
+      <tr><td>7</td><td>输出 JSON 和 Markdown 报告</td><td><span class="pill p-ok">✓</span></td><td><code>--format</code>，Markdown 适配 PR/Issue 评论</td></tr>
+      <tr><td>8</td><td>至少一组图抽取样例</td><td><span class="pill p-ok">✓</span></td><td>英文 + 中文汽车手册样例</td></tr>
+      <tr><td>9</td><td>至少一组召回样例</td><td><span class="pill p-ok">✓</span></td><td>doc-id 排序 + context 双套</td></tr>
+      <tr><td>10</td><td>样例覆盖中英文</td><td><span class="pill p-ok">✓</span></td><td>中英样例 + 每指标 language 参数 + 中文归一化</td></tr>
+      <tr><td>11</td><td>报告含失败/退化样例，不只平均分</td><td><span class="pill p-ok">✓</span></td><td>sample 级 regressed/improved + _errors</td></tr>
+      <tr><td>12</td><td>文档说明新增/运行/比较/解读</td><td><span class="pill p-ok">✓</span></td><td>GRAPHRAG_BENCHMARK.md 14 章</td></tr>
+    </table>
+
+    <h3>超额部分（Issue 没要求、我额外做的）</h3>
+    <div class="grid g2">
+      <div class="card"><b>+ 答案质量评测（6 指标）</b><p class="small">Issue 只要求抽取+召回。我额外补了 answer correctness/faithfulness/coverage 等 6 个，支持 ablation 模式对比 4 种检索策略的生成答案。</p></div>
+      <div class="card"><b>+ 样本级并发</b><p class="small">1000 题串行不可用。ThreadPool 样本级并发，实测 60 样本串行 3.21s → 并发 0.17s ≈ <b>19×</b>。</p></div>
+      <div class="card"><b>+ 难度分层报告</b><p class="small">对标 GraphRAG-Bench，按 question_type 分桶，能发现"GraphRAG 在 Fact Retrieval 强、在 Summarization 弱"这种真实短板。</p></div>
+      <div class="card"><b>+ 8 个公开数据集转换器</b><p class="small">hotpotqa/musique/2wikimultihopqa/text2kgbench/graphrag-bench 等，一键转成统一格式。</p></div>
+      <div class="card"><b>+ JSON 5 策略自愈解析</b><p class="small">LLM 返回脏 JSON 也能兜住，对标 GraphRAG-Bench JSONHandler。</p></div>
+      <div class="card"><b>+ 27 个测试文件</b><p class="small">单元 + 端到端集成测试，CI 覆盖。</p></div>
+    </div>
+    <div class="speak"><b>话术：</b>「验收项 12 条全部满足，这是基本盘；真正花心思的是这 6 个超额项——它们让 benchmark 从'能跑'变成'工程上可用'。」</div>
+  </section>
+
+  <!-- 3 ARCH -->
+  <section id="arch">
+    <h2>3 · 系统架构与逻辑闭环</h2>
+    <p class="lead">讲清楚"数据怎么进来、指标怎么算、结果怎么存怎么比"。</p>
+
+    <h3>模块结构</h3>
+    <pre><code>hugegraph_llm/benchmark/
+├── cli.py                 # run / compare 两个子命令入口
+├── metrics/
+│   ├── extraction/  (9)   # entity/triple/property/schema/syntax/structural/conflict/temporal/graph_structure
+│   ├── retrieval/   (6)   # recall_at_k/hit_at_k/mrr/context_precision/context_relevancy/evidence_recall
+│   └── answer/      (6)   # token_f1/exact_match/rouge_l/answer_correctness/faithfulness/coverage
+├── runners/               # extraction / retrieval / ablation / base
+├── baseline/              # store + compare
+├── reporters/             # json_reporter + markdown_reporter
+├── llm_judge/             # OpenAI-compatible client + prompts(双语)
+├── datasets/              # 8 个公开数据集转换器
+├── utils/normalize.py     # 中英文归一化管线
+└── data/samples/          # 6 组内置样例(含中文汽车手册)</code></pre>
+
+    <h3>核心数据流（一个样本的生命周期）</h3>
+    <div class="flow">
+      <span class="node">输入 JSON</span><span class="arrow">→</span>
+      <span class="node">Runner 逐样本</span><span class="arrow">→</span>
+      <span class="node">逐 metric 计算</span><span class="arrow">→</span>
+      <span class="node">SampleResult</span><span class="arrow">→</span>
+      <span class="node">聚合 overall + by_type</span><span class="arrow">→</span>
+      <span class="node">BenchmarkResult</span><span class="arrow">→</span>
+      <span class="node alt">报告 / baseline</span>
+    </div>
+
+    <h3>三层隔离（鲁棒性核心）</h3>
+    <table>
+      <tr><th>层级</th><th>失败时行为</th><th>实现</th></tr>
+      <tr><td>样本级</td><td>单样本抛异常 → 该样本空结果，<b>其他样本继续</b></td><td><code>_run_samples_concurrent</code 捕获 + <code>_errors</code></td></tr>
+      <tr><td>指标级</td><td>单 metric 失败 → 该 metric 返回 {}，<b>同样本其他 metric 继续</b></td><td><code>_run_metric_safe</code></td></tr>
+      <tr><td>LLM 级</td><td>API 抖动 → 2 次指数退避重试，全失败降级</td><td><code>retry_llm_call</code></td></tr>
+    </table>
+    <div class="speak"><b>为什么要强调这个：</b>「真实数据是脏的、LLM 会抽风、API 会抖。如果一条脏数据能让整个评测崩掉，这个 benchmark 就没法用。所以我在样本、指标、LLM 三层都做了隔离——这是工程经验和学生项目的分水岭。」</div>
+  </section>
+
+  <!-- 4 FLOW / 迭代闭环 -->
+  <section id="flow">
+    <h2>4 · 真实迭代闭环演示（重点）</h2>
+    <p class="lead">这是面试官最能感受到"这东西真的在用"的一节。<b>用真实 car33 数据讲</b>。</p>
+
+    <h3>闭环五步</h3>
+    <div class="flow">
+      <span class="node">① 跑 baseline<br><span class="small">--save-baseline</span></span><span class="arrow">→</span>
+      <span class="node">② 改 prompt/策略<br><span class="small">关 thinking / 修 fixed</span></span><span class="arrow">→</span>
+      <span class="node">③ 跑 candidate<br><span class="small">--save-baseline</span></span><span class="arrow">→</span>
+      <span class="node">④ compare<br><span class="small">看 overall delta</span></span><span class="arrow">→</span>
+      <span class="node alt">⑤ 看退化样例<br><span class="small">定位到具体样本</span></span>
+    </div>
+
+    <h3>真实案例 A：car33 三方抽取对比（中文汽车手册，33 样例）</h3>
+    <p class="small">数据源：<code>testdata/eval_ready/extraction/car33/</code>。同一份人工标注 gold，跑三个抽取版本——<b>api</b>（直接调 LLM API）、<b>codex</b>（Codex 抽取）、<b>pipeline</b>（本项目 GraphRAG 抽取流程，thinking 开启）。这是真实跑出来的 baseline。</p>
+    <table>
+      <tr><th>指标</th><th>方向</th><th>api</th><th>codex</th><th>pipeline</th><th>读法</th></tr>
+      <tr><td><code>entity_f1</code></td><td>↑越高越好</td><td><b>0.263</b></td><td>0.251</td><td>0.116</td><td>api 实体抽取最好</td></tr>
+      <tr><td><code>triple_f1</code></td><td>↑越高越好</td><td><b>0.129</b></td><td>0.105</td><td><span class="delta-dn">0.000</span></td><td><b>pipeline 三元组全错</b>，诊断信号</td></tr>
+      <tr><td><code>property_f1</code></td><td>↑越高越好</td><td><b>0.190</b></td><td>0.181</td><td>0.040</td><td>pipeline 属性也弱</td></tr>
+      <tr><td><code>type_constraint_pass</code></td><td>↑越高越好</td><td><b>0.909</b></td><td>0.879</td><td><b>0.909</b></td><td>三者 schema 合规都不错</td></tr>
+      <tr><td><code>illegal_edge_rate</code></td><td>↓越低越好</td><td>0.024</td><td><span class="delta-dn">0.058</span></td><td><b>0.000</b></td><td>codex 非法边最多</td></tr>
+      <tr><td><code>orphan_edge_rate</code></td><td>↓越低越好</td><td><b>0.000</b></td><td><b>0.000</b></td><td><span class="delta-dn">0.758</span></td><td><b>pipeline 76% 边孤立</b>，图断了</td></tr>
+      <tr><td><code>density</code></td><td>—看分布</td><td><b>0.072</b></td><td>0.037</td><td>0.006</td><td>pipeline 图极稀疏</td></tr>
+      <tr><td><code>largest_component_ratio</code></td><td>↑越连通越好</td><td><b>0.513</b></td><td>0.472</td><td>0.136</td><td>pipeline 图碎成很多小连通块</td></tr>
+      <tr><td><code>duplicate_edge_rate</code></td><td>↓越低越好</td><td>0.000</td><td>0.000</td><td><span class="delta-dn">0.042</span></td><td>pipeline 有重复边</td></tr>
+      <tr><td><code>num_nodes</code></td><td>—规模参考</td><td>43.4</td><td>44.2</td><td>90.0</td><td>pipeline 抽出节点最多但大多孤立</td></tr>
+    </table>
+    <div class="speak"><b>话术：</b>「这张表是 benchmark 价值的最好证明。三个版本肉眼很难比，但表里一目了然：<b>api 抽得最准</b>（entity/triple/property F1 都最高），<b>codex 非法边偏多</b>，而<b>我们的 pipeline 有两个致命问题</b>——triple_f1 是 0（三元组基本全错），且 orphan_edge_rate 高达 0.76（76% 的边是孤立的，图结构断了）。<br><br>如果没有 benchmark，这两个问题我根本发现不了；有了它，我<b>精确知道下一步该修 pipeline 的哪一步</b>。这就是'可量化、可对比、可定位'。」</div>
+    <div class="card" style="border-color:var(--amber)">
+      <p><span class="pill p-warn">面试加分点</span> 主动展示自己 pipeline 落后于 api/codex，并<b>用数据精确定位短板</b>（triple 全错 + 图断裂），比只报喜更能体现工程判断力。这是 benchmark 的诊断价值，不是"自曝其短"。</p>
+    </div>
+
+    <h3>真实案例 B：hotpotqa 召回退化定位（jitter 演示 compare）</h3>
+    <p class="small">用 <code>jitter_baseline.py</code> 对真实 hotpotqa 召回 baseline（100 题，<b>doc_id 已修正为 title，recall/mrr 严格可信</b>）做可控扰动，模拟"改了召回策略"后的 candidate，跑 compare：</p>
+    <div class="grid g4">
+      <div class="stat"><div class="n">100</div><div class="l">样本数</div></div>
+      <div class="stat"><div class="n">100</div><div class="l">退化样本</div></div>
+      <div class="stat"><div class="n">93</div><div class="l">改进样本</div></div>
+      <div class="stat"><div class="n">−0.019</div><div class="l">recall@1 整体 delta</div></div>
+    </div>
+    <h4>退化最严重的样本（compare 直接给出）</h4>
+    <table>
+      <tr><th>样本</th><th>退化项</th><th>baseline → candidate</th></tr>
+      <tr><td>5a7cc50e</td><td>hit_any@1</td><td>1.000 → 0.817 <span class="delta-dn">(−0.183)</span></td></tr>
+      <tr><td>5a7cc50e</td><td>recall@1</td><td>0.500 → 0.336 <span class="delta-dn">(−0.164)</span></td></tr>
+      <tr><td>5a7cc50e</td><td>hit_all@10</td><td>1.000 → 0.814 <span class="delta-dn">(−0.186)</span></td></tr>
+    </table>
+    <div class="speak"><b>话术：</b>「compare 不只给平均分，它告诉你<b>哪几个样本在哪个指标上退化了</b>。拿到这个表，我就能去翻这几个样本的原文，定位是召回策略的哪一步出了问题——这就是 Issue 说的'发现具体退化样例'。」</div>
+
+    <h3>闭环命令（现场可敲）</h3>
+    <pre><code># ① 跑 baseline
+hugegraph-benchmark run --mode retrieval \
+  --data testdata/eval_ready/retrieval/hotpotqa.json \
+  --offline --save-baseline base.json
+
+# ② (改代码 / 调 prompt)
+
+# ③ 跑 candidate
+hugegraph-benchmark run --mode retrieval --data ... --save-baseline cand.json
+
+# ④⑤ compare + 看退化
+hugegraph-benchmark compare --baseline base.json --candidate cand.json --format markdown</code></pre>
+  </section>
+
+  <!-- 5 extraction metrics -->
+  <section id="metric-extract">
+    <h2>5 · 图抽取指标（9 个）</h2>
+    <p class="lead">GraphRAG 区别于普通 RAG 的核心。<b>挑 2–3 个讲透原理</b>，其余过一遍。</p>
+    <table>
+      <tr><th>指标</th><th>评什么</th><th>类型</th><th>对照 Issue mermaid</th></tr>
+      <tr><td><code>syntax_validity</code></td><td>LLM 输出 JSON 可解析率 + 入库成功率</td><td><span class="pill p-off">离线</span></td><td>Syntax Validity</td></tr>
+      <tr><td><code>schema_validity</code></td><td>类型约束通过率 / 必填属性填充率 / 非法边比例</td><td><span class="pill p-off">离线</span></td><td>Schema Validity</td></tr>
+      <tr><td><code>structural_integrity</code></td><td>孤立点 / 悬挂边 / 重复三元组</td><td><span class="pill p-off">离线</span></td><td>结构完整性</td></tr>
+      <tr><td><code>entity_f1</code></td><td>实体 P/R/F1（对照 gold vertices）</td><td><span class="pill p-off">离线</span></td><td>Entity Quality</td></tr>
+      <tr><td><code>triple_f1</code></td><td>三元组 P/R/F1（对照 gold edges）</td><td><span class="pill p-off">离线</span></td><td>Relation Quality</td></tr>
+      <tr><td><code>property_f1</code></td><td>属性 P/R/F1</td><td><span class="pill p-off">离线</span></td><td>属性质量</td></tr>
+      <tr><td><code>conflict_detection</code></td><td>实体/关系冲突检测</td><td><span class="pill p-llm">LLM</span></td><td>Claim Quality</td></tr>
+      <tr><td><code>temporal_validity</code></td><td>时序一致性（事件先后矛盾）</td><td><span class="pill p-llm">LLM</span></td><td>Claim Quality</td></tr>
+      <tr><td><code>graph_structure</code></td><td>密度 / 聚类系数 / 连通性</td><td><span class="pill p-off">离线</span></td><td>对标 GraphRAG-Bench indexing</td></tr>
+    </table>
+
+    <h3>重点讲：entity_f1 的原理</h3>
+    <div class="card">
+      <p><b>匹配键：</b>把每个 vertex 归一化成 <code>(label, name)</code> 二元组。<b>不是字符串模糊匹配</b>，是集合运算。</p>
+      <pre><code>pred_keys = { normalize(label,name) for v in candidate }
+ref_keys  = { normalize(label,name) for v in gold }
+tp = |pred_keys ∩ ref_keys|
+precision = tp / |pred_keys|
+recall    = tp / |ref_keys|
+f1        = 2*P*R/(P+R)</code></pre>
+      <p class="small">归一化用 <code>normalize_answer</code>（见第 8 节），消除大小写/全半角/繁简/标点差异。<b>空 key 会被丢弃</b>，防止脏 vertex 污染分母。</p>
+    </div>
+    <div class="speak"><b>话术：</b>「entity_f1 不是简单的'字符串相等'。我把每个实体归一化成 (label,name) 集合元素，做集合交并——这样'宝马'和'寶馬'、'BMW'和'bmw'不会算成两个不同实体。这是中文场景必须做的。」</div>
+
+    <h3>real car33 数字佐证（API 抽取 vs 人工标注）</h3>
+    <table>
+      <tr><th>指标</th><th>api</th><th>codex</th><th>读法</th></tr>
+      <tr><td>entity_f1</td><td>0.2634</td><td>0.2512</td><td>两者接近</td></tr>
+      <tr><td>triple_f1</td><td>0.1293</td><td>0.1014</td><td>三元组召回偏低 → 改进空间</td></tr>
+      <tr><td>property_f1</td><td>0.1896</td><td>0.1811</td><td>属性抽取较弱</td></tr>
+      <tr><td>illegal_edge_rate</td><td>0.0241</td><td>0.0579</td><td>codex 非法边更多</td></tr>
+      <tr><td>density</td><td>0.0721</td><td>0.0365</td><td>api 图更密</td></tr>
+      <tr><td>type_constraint_pass</td><td>0.9091</td><td>0.8788</td><td>schema 合规度</td></tr>
+    </table>
+    <p class="small">数据源：<code>testdata/eval_ready/extraction/car33/baseline_api.json</code> / <code>baseline_codex.json</code>。</p>
+  </section>
+
+  <!-- 6 retrieval -->
+  <section id="metric-retrieve">
+    <h2>6 · 召回指标（6 个）</h2>
+    <p class="lead">回答两个问题：<b>该召回的召回了没？召回的内容有效吗？</b></p>
+    <table>
+      <tr><th>指标</th><th>公式/含义</th><th>类型</th></tr>
+      <tr><td><code>recall_at_k</code></td><td>各 K 截断下 <code>|top_k ∩ gold| / |gold|</code></td><td><span class="pill p-off">离线</span></td></tr>
+      <tr><td><code>hit_at_k</code></td><td>hit_any@K（至少命中一个）/ hit_all@K（全部命中）</td><td><span class="pill p-off">离线</span></td></tr>
+      <tr><td><code>mrr</code></td><td>第一个相关文档的倒数排名 <code>1/rank</code></td><td><span class="pill p-off">离线</span></td></tr>
+      <tr><td><code>context_precision</code></td><td>检索结果中相关内容的精确率</td><td><span class="pill p-llm">LLM</span></td></tr>
+      <tr><td><code>context_relevancy</code></td><td>检索上下文与问题的相关度</td><td><span class="pill p-llm">LLM</span></td></tr>
+      <tr><td><code>evidence_recall_llm</code></td><td>LLM 判定期望证据是否被覆盖（柔性）</td><td><span class="pill p-llm">LLM</span></td></tr>
+    </table>
+
+    <h3>重点讲：recall@k 的原理</h3>
+    <div class="card">
+      <pre><code>for k in [1,5,10,20]:
+    top_k = { normalize_doc_id(d) for d in retrieved[:k] }
+    recall@k = |top_k ∩ gold_set| / |gold_set|</code></pre>
+      <p class="small">关键：用 <code>normalize_doc_id</code>（strip+lower）归一化文档 ID，防止 <code>"doc_1 "</code> vs <code>"DOC_1"</code> 假阴性。gold 为空时 recall=0（而非除零）。</p>
+    </div>
+
+    <h3>真实数字：三个多跳 QA 数据集召回对比（doc_id 已修正为 title）</h3>
+    <table>
+      <tr><th>数据集</th><th>n</th><th>recall@1</th><th>recall@5</th><th>recall@10</th><th>hit_any@5</th><th>mrr</th></tr>
+      <tr><td>hotpotqa</td><td>100</td><td>0.060</td><td>0.490</td><td>1.000</td><td>0.770</td><td>0.368</td></tr>
+      <tr><td>musique</td><td>50</td><td>0.030</td><td>0.160</td><td>0.450</td><td>0.320</td><td>0.200</td></tr>
+      <tr><td>2wikimultihopqa</td><td>100</td><td>0.085</td><td>0.512</td><td>1.000</td><td>0.840</td><td>0.465</td></tr>
+    </table>
+    <div class="speak"><b>话术：</b>「musique 最难——recall@5 只有 0.16、mrr 0.20，因为它需要 2-4 跳推理，单跳召回很难命中所有 gold。hotpotqa/2wiki 是 distractor setting（gold 一定在候选里），所以 recall@10=1.0，真正区分度在 recall@1 和 mrr。这个对比本身就是 benchmark 的价值：<b>能量化不同数据集的难度差异</b>。」</div>
+    <div class="card" style="border-color:var(--green)">
+      <p><span class="pill p-ok">✓ 数据已修正</span> 此前这些数据集的 <code>gold_doc_ids</code> 装的是整段文本而非 title，导致 recall/mrr 是靠脆弱的全文精确匹配算出来的（数字虚高/失真）。现已修正下载源（HuggingFace 镜像）+ postprocess，<code>gold_doc_ids</code> 存真正的 title（如 <code>'Scott Derrickson'</code>），recall/mrr 严格可信。<b>GraphRAG-Bench 不在此列</b>——它不支持 doc_id 级 rank 评测（见第 17 节）。</p>
+    </div>
+
+    <div class="card" style="border-color:var(--amber)">
+      <p><span class="pill p-warn">⚠ 注意</span> <b>graphrag_bench_medical 的 recall 全是 0</b>。我在做的时候发现这不是召回真的差，而是该数据集 sample 的 <code>metadata</code> 里 <code>gold_doc_ids</code>/<code>retrieved_doc_ids</code> 字段为空（数据转换时没填进去）。详见第 17 节「待商榷点」。演示时<b>不要拿 medical 当"召回质量差"的例子</b>。</p>
+    </div>
+  </section>
+
+  <!-- 7 answer -->
+  <section id="metric-answer">
+    <h2>7 · 答案指标（6 个，超额）</h2>
+    <p class="lead">Issue 没要求，但 GraphRAG 的"生成"端不评就缺一截。用于 ablation 模式对比 4 种检索策略。</p>
+    <table>
+      <tr><th>指标</th><th>评什么</th><th>类型</th></tr>
+      <tr><td><code>token_f1</code></td><td>Token 级 P/R/F1（MRQA 官方标准）</td><td><span class="pill p-off">离线</span></td></tr>
+      <tr><td><code>exact_match</code></td><td>归一化后精确匹配</td><td><span class="pill p-off">离线</span></td></tr>
+      <tr><td><code>rouge_l</code></td><td>ROUGE-L（rouge_score 库）</td><td><span class="pill p-off">离线</span></td></tr>
+      <tr><td><code>answer_correctness</code></td><td>TP/FP/FN 分类 F1（±语义相似）</td><td><span class="pill p-llm">LLM</span></td></tr>
+      <tr><td><code>faithfulness</code></td><td>答案是否忠实于上下文（NLI）</td><td><span class="pill p-llm">LLM</span></td></tr>
+      <tr><td><code>coverage</code></td><td>参考答案事实被覆盖比例（对标 GraphRAG-Bench）</td><td><span class="pill p-llm">LLM</span></td></tr>
+    </table>
+    <h3>ablation：4 种检索策略对比</h3>
+    <p class="small">同一条问题，用 4 种召回分别生成答案，用答案指标打分：</p>
+    <table>
+      <tr><th>变体</th><th>含义</th></tr>
+      <tr><td><code>raw</code></td><td>无 RAG 基线</td></tr>
+      <tr><td><code>vector_only</code></td><td>仅向量召回</td></tr>
+      <tr><td><code>graph_only</code></td><td>仅图召回</td></tr>
+      <tr><td><code>graph_vector</code></td><td>图+向量混合（GraphRAG 主张）</td></tr>
+    </table>
+    <div class="speak"><b>话术：</b>「这 4 个变体能回答 GraphRAG 的核心问题——<b>图召回到底比纯向量召回好在哪、好在哪种问题上</b>。配合难度分层，能精确看到'graph_vector 在 Fact Retrieval 上赢、在 Summarization 上反而输'。」</div>
+  </section>
+
+  <!-- 8 principle -->
+  <section id="metric-principle">
+    <h2>8 · 指标原理：归一化与离线/LLM 分层</h2>
+
+    <h3>① 归一化管线（中文友好的关键）</h3>
+    <div class="card">
+      <p>对标 <b>HippoRAG 2 的 MRQA 官方 eval_utils</b>，并做中文增强：</p>
+      <pre><code># 中文路径
+全角 → 半角  →  繁→简(opencc)  →  jieba 分词  →  小写
+# 英文路径
+空格分词  →  小写
+# 共同
+去标点(含中文标点 ，。！？、；：""（）【】)  →  去冠词(a/an/the,仅英文)  →  折叠空白</code></pre>
+    </div>
+
+    <h4>真实例子：同一实体在三个抽取版本里的不同写法（car33 场景）</h4>
+    <p class="small">下面是用我们的 <code>normalize_answer</code> / <code>normalize_doc_id</code> 真实跑出来的结果。模拟"api 抽出 <code>BMW 5系</code>、codex 抽出 <code>寶馬５系</code>（繁体+全角）、pipeline 抽出 <code>ＢＭＷ ５系</code>（全角字母）"——三个本来是同一个实体：</p>
+    <table>
+      <tr><th>原始输入</th><th>language</th><th>normalize_answer 输出</th><th>归一效果</th></tr>
+      <tr><td><code>BMW 5系</code></td><td>en</td><td><code>bmw 5系</code></td><td><span class="pill p-ok">✓ 大小写归一</span></td></tr>
+      <tr><td><code>寶馬５系</code></td><td>zh</td><td><code>宝马5系</code></td><td><span class="pill p-ok">✓ 繁→简 + 全角→半角</span></td></tr>
+      <tr><td><code>ＢＭＷ ５系</code></td><td>zh</td><td><code>bmw 5系</code></td><td><span class="pill p-ok">✓ 全角→半角 + 小写</span></td></tr>
+    </table>
+    <p class="small"><b>读法：</b>三行归一后，第一行 <code>bmw 5系</code> 与第三行完全一致（直接命中）；第二行 <code>宝马5系</code> 因含中文"宝马"与英文"bmw"本就是不同字符串，但<b>繁体寶馬已正确转简体宝马</b>，与简体原文 <code>宝马</code> 能匹配——假阴性被消除。</p>
+
+    <h4>真实例子：文档 ID 归一化（recall@k 场景）</h4>
+    <table>
+      <tr><th>原始 doc_id</th><th>normalize_doc_id 输出</th></tr>
+      <tr><td><code>Doc_01</code></td><td><code>doc_01</code></td></tr>
+      <tr><td><code>" doc_01 "</code>（带空格）</td><td><code>doc_01</code></td></tr>
+      <tr><td><code>DOC_01</code></td><td><code>doc_01</code></td></tr>
+    </table>
+    <p class="small">三种写法归一后都是 <code>doc_01</code>，recall@k 的集合交并才不会因为大小写/空格错判。</p>
+
+    <div class="card" style="border-color:var(--green)">
+      <p><span class="pill p-ok">✓ 已修复</span> 此前发现 opencc 为可选依赖、未安装时繁简转换被 try/except 静默跳过（<code>寶馬</code> 不会转 <code>宝马</code>）。现已将 <code>opencc-python-reimplemented</code> 列为必装依赖并验证：<code>寶馬５系</code> → <code>宝马5系</code> 繁简转换正常生效。建议把该依赖固化到 <code>pyproject.toml</code> 的 benchmark extras 中，避免他人在新环境踩同样的静默降级。</p>
+    </div>
+
+    <div class="speak"><b>话术：</b>「归一化是中文评测的命门。我用三个真实例子演示：全角半角、大小写、繁简体、空格这些差异我们的管线<b>全部能消掉</b>——<code>寶馬５系</code> 归一成 <code>宝马5系</code>，<code>ＢＭＷ</code> 归一成 <code>bmw</code>。我做这套的时候还顺手发现 opencc 没装导致繁简静默失效，已经修掉并验证了——<b>当场用真实输出证明归一化在 work</b>，比空讲原理有说服力得多。」</div>
+
+    <h3>② 两套归一化函数</h3>
+    <table>
+      <tr><th>函数</th><th>用途</th><th>额外处理</th></tr>
+      <tr><td><code>normalize_answer</code></td><td>文本/实体匹配类指标</td><td>去标点、去冠词、分词</td></tr>
+      <tr><td><code>normalize_doc_id</code></td><td>召回类指标</td><td>strip + lower（doc_id 无标点）</td></tr>
+    </table>
+
+    <h3>③ 离线 vs LLM 指标的边界</h3>
+    <div class="grid g2">
+      <div class="card"><b><span class="pill p-off">离线（14 个）</span></b><p class="small">纯计算，无网络、无随机性。<code>--offline</code> 模式只跑这些。包括所有 P/R/F1、recall@k、schema/syntax 校验、graph_structure。</p></div>
+      <div class="card"><b><span class="pill p-llm">LLM-Judge（7 个）</span></b><p class="small">需要语义判断的：faithfulness、context_precision、coverage 等。固定 <code>temperature=0, seed=42</code> 保证可复现。</p></div>
+    </div>
+    <div class="speak"><b>话术：</b>「这个分层是 Issue 的硬要求——基础评测不能强依赖外部 LLM。我把指标分成两类：能用集合运算和规则算的，全部离线；只有需要语义判断的才用 LLM，而且 LLM 那部分也是可选的，<code>--offline</code> 一键跳过。」</div>
+  </section>
+
+  <!-- 9 robust -->
+  <section id="robust">
+    <h2>9 · 鲁棒性 4 层设计</h2>
+    <table>
+      <tr><th>层</th><th>机制</th><th>价值</th></tr>
+      <tr><td>样本级隔离</td><td>单样本异常 → 空结果 + _errors，不中断</td><td>脏数据不炸</td></tr>
+      <tr><td>指标级隔离</td><td>单 metric 失败 → {}，同样本其他继续</td><td>新指标 bug 不连累</td></tr>
+      <tr><td>JSON 5 策略自愈</td><td>直接解析→提取```json```→正则{}→修复尾逗号/单引号/None→None 降级</td><td>LLM 脏输出兜住</td></tr>
+      <tr><td>LLM 重试退避</td><td>2 次重试，1s→2s 指数退避</td><td>API 抖动兜底</td></tr>
+    </table>
+  </section>
+
+  <!-- 10 repro -->
+  <section id="repro">
+    <h2>10 · 可复现性保障</h2>
+    <table>
+      <tr><th>机制</th><th>实现</th></tr>
+      <tr><td>全量持久化</td><td>baseline JSON 含 meta/overall/by_type/samples 全部</td></tr>
+      <tr><td>运行上下文</td><td>git_commit / timestamp / max_workers / model / temperature / seed / data_path / language</td></tr>
+      <tr><td>离线确定性</td><td><code>--offline</code> 无随机无网络</td></tr>
+      <tr><td>并发不破序</td><td>result.samples 始终按原数据顺序</td></tr>
+      <tr><td>subset 可固定</td><td><code>--subset-size N</code> 取前 N 条</td></tr>
+    </table>
+    <div class="speak"><b>话术：</b>「对比两份结果前，先核对 git_commit / max_workers / model / seed 是否一致——不一致的 delta 可能是代码变更也可能是噪声。benchmark 的职责就是把真信号从噪声里捞出来。」</div>
+  </section>
+
+  <!-- 11 tiered -->
+  <section id="tiered">
+    <h2>11 · 难度分层报告（对标 GraphRAG-Bench）</h2>
+    <p>样本带 <code>question_type</code> 即自动按桶报告，无需额外参数。</p>
+    <div class="grid g4">
+      <div class="stat"><div class="n" style="font-size:15px">Fact Retrieval</div><div class="l">事实检索</div></div>
+      <div class="stat"><div class="n" style="font-size:15px">Complex Reasoning</div><div class="l">复杂推理</div></div>
+      <div class="stat"><div class="n" style="font-size:15px">Contextual Summarize</div><div class="l">上下文摘要</div></div>
+      <div class="stat"><div class="n" style="font-size:15px">Creative Generation</div><div class="l">创意生成</div></div>
+    </div>
+    <div class="speak"><b>话术：</b>「GraphRAG 的真实短板是'在某些任务类型上反而比向量召回差'——WildGraphBench 论文揭示的。不分桶看平均分，这个短板会被掩盖。分层报告让它暴露出来。」</div>
+  </section>
+
+  <!-- 12 concurrent -->
+  <section id="concurrent">
+    <h2>12 · 并发执行</h2>
+    <table>
+      <tr><th>项</th><th>决策</th></tr>
+      <tr><td>模型</td><td>ThreadPoolExecutor（非 async）</td></tr>
+      <tr><td>粒度</td><td>样本级（每样本多 metric 在 worker 内串行）</td></tr>
+      <tr><td>默认</td><td>20（<code>--max-workers</code> 可调，1=串行调试）</td></tr>
+      <tr><td>线程安全</td><td>BaseMetric 无状态 / _LLMWrapper 无状态 / _errors 加 Lock</td></tr>
+      <tr><td>实测</td><td>60 样本：串行 3.21s → 并发(20) 0.17s ≈ <b>19×</b></td></tr>
+    </table>
+  </section>
+
+  <!-- 13 i18n -->
+  <section id="i18n">
+    <h2>13 · 中英文支持</h2>
+    <ul>
+      <li><b>归一化</b>：全角→半角、繁→简(opencc)、中文标点、jieba 分词</li>
+      <li><b>双语 Judge prompt</b>：<code>get_prompt(name, language)</code> 按 <code>--language</code> 切换，中文是本地化非机翻</li>
+      <li><b>中文样例</b>：<code>car_extraction_sample.json</code>（汽车手册）+ <code>chinese_retrieval_sample.json</code></li>
+      <li><b>真实中文数据</b>：car33（33 条汽车手册）已跑通 extraction 全 9 指标</li>
+    </ul>
+  </section>
+
+  <!-- 14 data -->
+  <section id="data">
+    <h2>14 · 数据集与规模</h2>
+    <h3>内置样例（6 组，开箱即用）</h3>
+    <table>
+      <tr><th>文件</th><th>模式</th><th>语言</th><th>n</th></tr>
+      <tr><td>extraction_sample.json</td><td>抽取</td><td>英</td><td>3</td></tr>
+      <tr><td>car_extraction_sample.json</td><td>抽取</td><td><b>中</b></td><td>2</td></tr>
+      <tr><td>retrieval_docid_sample.json</td><td>召回</td><td>英</td><td>3</td></tr>
+      <tr><td>retrieval_context_sample.json</td><td>召回</td><td>英</td><td>2</td></tr>
+      <tr><td>chinese_retrieval_sample.json</td><td>召回</td><td><b>中</b></td><td>2</td></tr>
+      <tr><td>ablation_sample.json</td><td>消融</td><td>英</td><td>2</td></tr>
+    </table>
+    <h3>真实离线数据（testdata/eval_ready，演示用）</h3>
+    <table>
+      <tr><th>类别</th><th>数据</th><th>规模</th></tr>
+      <tr><td>抽取</td><td>car33（中文汽车手册）</td><td>33</td></tr>
+      <tr><td>抽取</td><td>text2kgbench movie/culture</td><td>84+</td></tr>
+      <tr><td>召回</td><td>hotpotqa</td><td>100（全量 740）</td></tr>
+      <tr><td>召回</td><td>musique</td><td>50（全量 1000）</td></tr>
+      <tr><td>召回</td><td>2wikimultihopqa</td><td>100（全量 1000）</td></tr>
+      <tr><td>召回</td><td>graphrag_bench_medical/novel</td><td>203 / 201</td></tr>
+      <tr><td>消融</td><td>hotpotqa_llm/vector</td><td>20+20</td></tr>
+    </table>
+    <h3>公开数据集转换器（8 个）</h3>
+    <p class="small">hotpotqa / 2wikimultihopqa / musique / anonyrag-chs / anonyrag-eng / graphrag-bench-medical / graphrag-bench-novel / text2kgbench。<b>转换器不发明数据，只做格式映射。</b></p>
+  </section>
+
+  <!-- 15 results -->
+  <section id="results">
+    <h2>15 · 真实实验结果一览</h2>
+    <h3>抽取（car33 中文汽车手册，API 抽取）</h3>
+    <table>
+      <tr><th>指标</th><th>值</th><th>可视化</th></tr>
+      <tr><td>entity_f1</td><td>0.263</td><td><div class="bar-wrap"><div class="bar" style="width:26%"></div></div></td></tr>
+      <tr><td>triple_f1</td><td>0.129</td><td><div class="bar-wrap"><div class="bar" style="width:13%"></div></div></td></tr>
+      <tr><td>property_f1</td><td>0.190</td><td><div class="bar-wrap"><div class="bar" style="width:19%"></div></div></td></tr>
+      <tr><td>type_constraint_pass</td><td>0.909</td><td><div class="bar-wrap"><div class="bar" style="width:91%"></div></div></td></tr>
+      <tr><td>required_property_fill</td><td>0.909</td><td><div class="bar-wrap"><div class="bar" style="width:91%"></div></div></td></tr>
+      <tr><td>illegal_edge_rate</td><td>0.024</td><td><div class="bar-wrap"><div class="bar" style="width:2%;background:var(--red)"></div></div></td></tr>
+      <tr><td>conflict_rate</td><td>0.0006</td><td><div class="bar-wrap"><div class="bar" style="width:0%;background:var(--red)"></div></div></td></tr>
+    </table>
+    <div class="speak"><b>读法：</b>「schema 合规度很高（0.91），但抽取召回偏低（triple_f1 只有 0.13）——说明 API 抽取'抽出来的都对'，但'漏得多'。这是改进方向，也是 benchmark 的诊断价值。」</div>
+
+    <h3>召回（hotpotqa vs musique）</h3>
+    <h3>召回（hotpotqa / musique / 2wiki，doc_id 已修正）</h3>
+    <table>
+      <tr><th>指标</th><th>hotpotqa(100)</th><th>musique(50)</th><th>2wiki(100)</th></tr>
+      <tr><td>recall@1</td><td>0.060</td><td>0.030</td><td>0.085</td></tr>
+      <tr><td>recall@5</td><td>0.490</td><td>0.160</td><td>0.512</td></tr>
+      <tr><td>recall@10</td><td>1.000</td><td>0.450</td><td>1.000</td></tr>
+      <tr><td>hit_any@5</td><td>0.770</td><td>0.320</td><td>0.840</td></tr>
+      <tr><td>mrr</td><td>0.368</td><td>0.200</td><td>0.465</td></tr>
+    </table>
+  </section>
+
+  <!-- 16 extend -->
+  <section id="extend">
+    <h2>16 · 扩展指南（验收项 #12）</h2>
+    <h3>新增一个指标（4 步）</h3>
+    <pre><code>@MetricRegistry.register
+class MyMetric(BaseMetric):
+    name: str = "my_metric"
+    requires_llm: bool = False
+    def calculate(self, prediction, reference=None, **kwargs):
+        return {"my_metric": 0.9}</code></pre>
+    <ol>
+      <li>实现指标类，<code>@MetricRegistry.register</code> 装饰</li>
+      <li>在 <code>metrics/&lt;组&gt;/__init__.py</code> 导入（触发注册）</li>
+      <li>在 <code>cli.py</code> 的 <code>_MODE_ALLOWED_METRICS</code> 加入对应 mode</li>
+      <li>(LLM 指标) 在 <code>prompts.py</code> 加 prompt 并注册</li>
+    </ol>
+    <h3>新增一组 case</h3>
+    <p>按 schema 写 JSON → 放任意路径 → <code>--data</code> 指向。<b>无需改代码。</b></p>
+    <h3>新增公开数据集</h3>
+    <p>在 <code>prepare_external_datasets.py</code> 加一个转换函数，做字段映射即可。</p>
+  </section>
+
+  <!-- 17 issues -->
+  <section id="issues">
+    <h2>17 · ⚠ 过程中发现的待商榷点</h2>
+    <div class="speak"><b>诚实比完美更重要。</b>做这套 SPA 时我核对了真实数据，发现两处指标/数据不一致，明天是否处理<b>想听你意见</b>，不急着改。</div>
+
+    <div class="card" style="border-color:var(--amber)">
+      <h4>待商榷点 #1：GraphRAG-Bench (medical/novel) 不支持 doc_id 级 rank 评测</h4>
+      <p><b>现象：</b>medical/novel 的 <code>recall@k</code>、<code>mrr</code> 全为 0。</p>
+      <p><b>根因（已查明）：</b>GraphRAG-Bench 的 Questions 只有改写过的 <code>evidence</code> 文本（非原文 span，在 corpus 里精确匹配 0/50），<b>没有 gold document ID / chunk ID / question-to-chunk relevance judgments</b>；Corpus 是整篇 105 万字符的长文档，<b>无官方 chunk 切分</b>。因此该数据集<b>从设计上就不支持严格可复现的 ID-based Recall@K / MRR / nDCG</b>。</p>
+      <p><b>结论：</b><span class="pill p-warn">数据集局限</span>不是 bug，是数据集定位决定的。GraphRAG-Bench 官方用 <b>Context Relevancy + LLM 语义归因的 Evidence Recall</b> 评检索，不评 chunk 排名。<b>「不支持严格 doc/chunk 排名评测」是对的；「完全不评检索」是错的。</b></p>
+      <p><b>处理：</b>演示时 GraphRAG-Bench <b>降优先级</b>，召回 rank 演示只用 HotpotQA/MuSiQue/2Wiki（天然带 title 作为 doc_id）。GraphRAG-Bench 若要用，只看 <code>context_relevancy</code> / <code>evidence_recall_llm</code>。</p>
+    </div>
+
+    <div class="card" style="border-color:var(--green)">
+      <h4>已修复：HotpotQA/MuSiQue/2Wiki 的 doc_id <span class="pill p-ok">✓</span></h4>
+      <p><b>原问题：</b>这三家的 eval_ready 中间数据里，<code>gold_doc_ids</code> 装的是整段文本（698 字符）而非 title，<code>normalize_doc_id</code> 靠脆弱的全文精确匹配，recall/mrr 数字失真。根因是<b>下载源（CMU）已失效（502），旧数据由过期转换器生成</b>。</p>
+      <p><b>已处理：</b>① 把下载源切到 HuggingFace 镜像（hotpotqa/2wiki parquet、musique jsonl）；② 新增 postprocess 把 HF 的 struct-of-arrays / JSON-string 格式转回转换器期望的 list-of-dicts；③ 重新生成数据 + baseline，<code>gold_doc_ids</code> 现在是真正的 title（如 <code>'Scott Derrickson'</code>），recall/mrr 严格可信。</p>
+    </div>
+
+    <div class="card" style="border-color:var(--amber)">
+      <h4>待商榷点 #2：car33 的 <code>json_parse_rate=0</code> 与 <code>load_to_db_success=0</code></h4>
+      <p><b>现象：</b>car33 各版本 baseline 里 <code>json_parse_rate</code> 和 <code>load_to_db_success</code> 都是 0，但 entity_f1/triple_f1 却有非零值。</p>
+      <p><b>排查：</b><code>syntax_validity</code> 需要 candidate 带 <code>raw_responses</code> + <code>parse_results</code> 字段才计算；car33 的 candidate JSON 只带了已解析好的 vertex/edge 结构，没有原始 raw_responses → parse_rate=0 是"缺字段"而非"真解析失败"。F1 用的是已填好的结构，所以非零。</p>
+      <p><b>结论：</b><span class="pill p-warn">指标/数据口径不一致</span><code>json_parse_rate=0</code> 会被误读成"抽取全失败"。</p>
+      <p><b>建议：</b>① 在 candidate 数据里补 <code>raw_responses</code>；② 或让 <code>syntax_validity</code> 在缺字段时返回 <code>null/未评估</code> 而非 0；③ 演示时口头说明这个 0 不代表真实失败。</p>
+    </div>
+
+    <div class="card" style="border-color:var(--green)">
+      <h4>待商榷点 #3：opencc 繁简转换静默失效 <span class="pill p-ok">✓ 已修复</span></h4>
+      <p><b>现象：</b>归一化文档宣传"繁→简(opencc)"，但用 <code>normalize_answer('寶馬５系','zh')</code> 实测输出 <code>寶馬5系</code>——繁体"寶馬"未被转成"宝马"。</p>
+      <p><b>排查：</b><code>opencc</code> 是可选依赖（<code>try: from opencc import OpenCC</code>），当前 .venv 未安装，import 失败被 <code>except</code> 静默跳过，繁简转换整段不执行，但无任何告警。</p>
+      <p><b>已处理：</b>安装 <code>opencc-python-reimplemented==0.1.7</code>，实测 <code>寶馬５系</code> → <code>宝马5系</code> 繁简转换正常生效。<b>遗留动作（待你确认）：</b>把该依赖固化进 <code>pyproject.toml</code> 的 benchmark extras，并在缺失时打印 warning 而非完全静默——避免他人在新环境重复踩坑。</p>
+    </div>
+
+    <div class="card">
+      <h4>设计层面的反思（非 bug，供讨论）</h4>
+      <ul>
+        <li><b>oracle sanity 容易被误读：</b>extraction 的 oracle 测试（candidate=gold 复制）只能证明"指标链路通"，但 F1=1.0 容易被误读成"抽取效果满分"。文档已注明，但报告里可加 <code>test_type=oracle</code> 标签更醒目。</li>
+        <li><b>Provenance Quality 未实现：</b>Issue mermaid 里的 source span / doc attribution 没做。Issue 自己写明"后续扩展"，但演示时要主动说"这一项是 roadmap"，别藏着。</li>
+        <li><b>ablation 的 controlled answer：</b>验证用的人工构造答案，非真实 pipeline 产物。已注明，但报告标题可强化"controlled"字样。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 18 wrap -->
+  <section id="wrap">
+    <h2>18 · 收尾话术</h2>
+    <div class="speak"><b>结尾三句：</b><br>
+    「这套 benchmark 把 GraphRAG 的效果评测从<b>靠感觉</b>变成了<b>靠数据</b>——改完代码能立刻知道变好没、哪退化。」<br>
+    「Issue #75 的 12 项验收全部满足，并且在并发、分层、中文、鲁棒性上做了超额。」<br>
+    「我也诚实地发现了两处数据/口径问题，已经记下来等讨论——<b>工程的价值不在于没有问题，在于能发现问题</b>。」</div>
+
+    <h3>面试官可能的追问 & 回答</h3>
+    <details><summary>Q: 为什么不直接用 RAGAS？</summary>核心指标强依赖 LLM、英文为主、且无图抽取维度——而图抽取正是 GraphRAG 的核心。我借鉴了它的指标定义和 prompt 风格，但自建轻量内核。</details>
+    <details><summary>Q: LLM-Judge 结果可信吗？</summary>不可全信，所以我把离线和 LLM 分层。离线指标（P/R/F1、recall@k）是客观的；LLM 指标固定 temperature=0/seed=42 保证可复现，且作为<b>补充</b>而非<b>唯一依据</b>。</details>
+    <details><summary>Q: 并发会不会破坏可复现？</summary>不会。BaseMetric 无状态、_errors 加 Lock、result.samples 按原序。相同输入+相同并发度=相同 per-sample 值。</details>
+    <details><summary>Q: 怎么扩展到新数据集？</summary>写个转换函数做字段映射，不动核心代码。已支持 8 个公开数据集。</details>
+    <details><summary>Q: medical recall 全 0 怎么解释？</summary>（见第 17 节）—— 这是数据转换没填 doc_ids，不是召回真差。我已定位，等修。</details>
+
+    <h3>快速命令卡（现场敲）</h3>
+    <pre><code># 离线跑召回
+hugegraph-benchmark run --mode retrieval \
+  --data testdata/eval_ready/retrieval/hotpotqa.json --offline
+
+# 跑中文抽取
+hugegraph-benchmark run --mode extraction --language zh \
+  --data testdata/eval_ready/extraction/car33/candidates_api_vs_manual.json --offline
+
+# 对比 + 看退化
+hugegraph-benchmark compare \
+  --baseline .../baseline_pipeline.json \
+  --candidate .../baseline_pipeline_fixed.json --format markdown</code></pre>
+
+    <p class="footnote">演示文档 · 对应分支 feat/graphrag-benchmark-issue7 · Issue #75 · 生成于 2026-07-06</p>
+  </section>
+
+  </main>
+</div>
+
+<script>
+  const links=[...document.querySelectorAll('.side a')];
+  const secs=[...document.querySelectorAll('section')];
+  const linkOf=id=>links.find(a=>a.getAttribute('href')==='#'+id);
+  // 点击导航：平滑滚动到对应 section（顶部留 sidebar 偏移）
+  links.forEach(a=>a.addEventListener('click',e=>{
+    e.preventDefault();
+    const t=document.getElementById(a.getAttribute('href').slice(1));
+    if(t) t.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
+  // 滚动时高亮当前 section 对应的导航项
+  const setActive=id=>{
+    links.forEach(a=>a.classList.toggle('active', a.getAttribute('href')==='#'+id));
+    const cur=linkOf(id);
+    if(cur && cur.scrollIntoView){
+      // 让侧边栏内当前项可见（侧边栏独立滚动）
+      const side=document.querySelector('.side');
+      const r=cur.getBoundingClientRect(), sr=side.getBoundingClientRect();
+      if(r.top<sr.top||r.bottom>sr.bottom) cur.scrollIntoView({block:'nearest'});
+    }
+  };
+  const io=new IntersectionObserver(entries=>{
+    // 取最靠近顶部、且可见的 section
+    const vis=entries.filter(en=>en.isIntersecting)
+      .sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top);
+    if(vis.length) setActive(vis[0].target.id);
+  },{rootMargin:'-10% 0px -70% 0px',threshold:0});
+  secs.forEach(s=>io.observe(s));
+  // 初始高亮第一节
+  if(secs[0]) setActive(secs[0].id);
+  // 键盘 ←/→ / j/k 上下翻节
+  const order=links.map(a=>a.getAttribute('href').slice(1));
+  const curIdx=()=>{const y=window.scrollY+window.innerHeight*0.15;let bi=0;
+    secs.forEach((s,i)=>{if(s.offsetTop<=y)bi=i;});return bi;};
+  document.addEventListener('keydown',e=>{
+    if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+    const i=curIdx();
+    if(e.key==='ArrowRight'||e.key==='j'||e.key==='ArrowDown'){
+      e.preventDefault(); if(i<order.length-1) document.getElementById(order[i+1]).scrollIntoView({behavior:'smooth'}); }
+    if(e.key==='ArrowLeft'||e.key==='k'||e.key==='ArrowUp'){
+      e.preventDefault(); if(i>0) document.getElementById(order[i-1]).scrollIntoView({behavior:'smooth'}); }
+  });
+</script>
+</body>
+</html>
