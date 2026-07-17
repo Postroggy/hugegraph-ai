@@ -1,0 +1,201 @@
+{
+  "schema": {
+    "vertexlabels": [
+      {
+        "id": 1,
+        "name": "person",
+        "properties": [
+          "name",
+          "age"
+        ],
+        "primary_keys": [
+          "name"
+        ]
+      }
+    ],
+    "edgelabels": [
+      {
+        "id": 2,
+        "name": "knows",
+        "source_label": "person",
+        "target_label": "person",
+        "properties": [
+          "since"
+        ]
+      }
+    ]
+  },
+  "samples": [
+    {
+      "sample_id": "ext_001",
+      "input_text": "Alice knows Bob since 2020. Bob is 30 years old.",
+      "gold_vertices": [
+        {
+          "label": "person",
+          "name": "Alice",
+          "properties": {
+            "name": "Alice"
+          }
+        },
+        {
+          "label": "person",
+          "name": "Bob",
+          "properties": {
+            "name": "Bob"
+          }
+        }
+      ],
+      "gold_edges": [
+        {
+          "label": "knows",
+          "outV": "Alice",
+          "outVLabel": "person",
+          "inV": "Bob",
+          "inVLabel": "person",
+          "properties": {
+            "since": "2020"
+          }
+        }
+      ],
+      "candidate_vertices": [
+        {
+          "label": "person",
+          "name": "Alice",
+          "properties": {
+            "name": "Alice"
+          }
+        },
+        {
+          "label": "person",
+          "name": "Bob",
+          "properties": {
+            "name": "Bob"
+          }
+        }
+      ],
+      "candidate_edges": [
+        {
+          "label": "knows",
+          "outV": "Alice",
+          "outVLabel": "person",
+          "inV": "Bob",
+          "inVLabel": "person",
+          "properties": {
+            "since": "2020"
+          }
+        }
+      ]
+    },
+    {
+      "sample_id": "ext_002",
+      "input_text": "Charlie met Diana at the conference.",
+      "gold_vertices": [
+        {
+          "label": "person",
+          "name": "Charlie",
+          "properties": {
+            "name": "Charlie"
+          }
+        },
+        {
+          "label": "person",
+          "name": "Diana",
+          "properties": {
+            "name": "Diana"
+          }
+        }
+      ],
+      "gold_edges": [
+        {
+          "label": "knows",
+          "outV": "Charlie",
+          "outVLabel": "person",
+          "inV": "Diana",
+          "inVLabel": "person",
+          "properties": {}
+        }
+      ],
+      "candidate_vertices": [
+        {
+          "label": "person",
+          "name": "Charlie",
+          "properties": {
+            "name": "Charlie"
+          }
+        }
+      ],
+      "candidate_edges": []
+    },
+    {
+      "sample_id": "ext_003",
+      "input_text": "Eve works with Frank on the project.",
+      "gold_vertices": [
+        {
+          "label": "person",
+          "name": "Eve",
+          "properties": {
+            "name": "Eve"
+          }
+        },
+        {
+          "label": "person",
+          "name": "Frank",
+          "properties": {
+            "name": "Frank"
+          }
+        }
+      ],
+      "gold_edges": [
+        {
+          "label": "knows",
+          "outV": "Eve",
+          "outVLabel": "person",
+          "inV": "Frank",
+          "inVLabel": "person",
+          "properties": {}
+        }
+      ],
+      "candidate_vertices": [
+        {
+          "label": "person",
+          "name": "Eve",
+          "properties": {
+            "name": "Eve"
+          }
+        },
+        {
+          "label": "person",
+          "name": "Frank",
+          "properties": {
+            "name": "Frank"
+          }
+        },
+        {
+          "label": "person",
+          "name": "Ghost",
+          "properties": {
+            "name": "Ghost"
+          }
+        }
+      ],
+      "candidate_edges": [
+        {
+          "label": "knows",
+          "outV": "Eve",
+          "outVLabel": "person",
+          "inV": "Frank",
+          "inVLabel": "person",
+          "properties": {}
+        },
+        {
+          "label": "knows",
+          "outV": "Eve",
+          "outVLabel": "person",
+          "inV": "Ghost",
+          "inVLabel": "person",
+          "properties": {}
+        }
+      ]
+    }
+  ]
+}

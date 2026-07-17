@@ -1,0 +1,54 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+"""Extraction metrics for graph construction evaluation."""
+
+from typing import Any, Dict
+
+
+def _is_edge(item: Dict[str, Any]) -> bool:
+    """Heuristic: an item is an edge if it has endpoint fields."""
+    return any(key in item for key in ("outV", "inV", "source", "target"))
+
+
+def _edge_out(item: Dict[str, Any]) -> Any:
+    """Return an edge's source endpoint across supported sample formats."""
+    return item.get("outV") or item.get("source") or ""
+
+
+def _edge_in(item: Dict[str, Any]) -> Any:
+    """Return an edge's target endpoint across supported sample formats."""
+    return item.get("inV") or item.get("target") or ""
+
+
+from hugegraph_llm.benchmark.metrics.extraction.entity_f1 import EntityF1  # noqa: E402
+from hugegraph_llm.benchmark.metrics.extraction.extraction_faithfulness import ExtractionFaithfulness  # noqa: E402
+from hugegraph_llm.benchmark.metrics.extraction.property_f1 import PropertyF1  # noqa: E402
+from hugegraph_llm.benchmark.metrics.extraction.schema_validity import SchemaValidity  # noqa: E402
+from hugegraph_llm.benchmark.metrics.extraction.semantic_entity_f1 import SemanticEntityF1  # noqa: E402
+from hugegraph_llm.benchmark.metrics.extraction.semantic_triple_f1 import SemanticTripleF1  # noqa: E402
+from hugegraph_llm.benchmark.metrics.extraction.triple_f1 import TripleF1  # noqa: E402
+
+__all__ = [
+    "EntityF1",
+    "TripleF1",
+    "PropertyF1",
+    "SchemaValidity",
+    "SemanticEntityF1",
+    "SemanticTripleF1",
+    "ExtractionFaithfulness",
+]

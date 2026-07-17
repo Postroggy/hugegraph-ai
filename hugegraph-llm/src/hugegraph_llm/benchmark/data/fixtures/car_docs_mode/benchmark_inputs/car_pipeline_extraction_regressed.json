@@ -1,0 +1,606 @@
+{
+  "schema": {
+    "vertexlabels": [
+      {
+        "name": "Component",
+        "primary_keys": [
+          "comp_name"
+        ]
+      },
+      {
+        "name": "Function",
+        "primary_keys": [
+          "func_name"
+        ]
+      },
+      {
+        "name": "Status",
+        "primary_keys": [
+          "status_name"
+        ]
+      },
+      {
+        "name": "Operation",
+        "primary_keys": [
+          "op_name"
+        ]
+      }
+    ],
+    "edgelabels": [
+      {
+        "name": "ACTIVATES",
+        "source_label": "Component",
+        "target_label": "Function"
+      },
+      {
+        "name": "OPERATES_ON",
+        "source_label": "Operation",
+        "target_label": "Component"
+      },
+      {
+        "name": "HAS_STATUS",
+        "source_label": "Component",
+        "target_label": "Status"
+      }
+    ]
+  },
+  "samples": [
+    {
+      "sample_id": "奥德赛用户手册2023款--e9c06954_s0046",
+      "input_text": "",
+      "gold_vertices": [
+        {
+          "label": "Component",
+          "name": "电动侧滑门",
+          "properties": {
+            "comp_name": "电动侧滑门",
+            "component_type": "车门部件",
+            "location": "车身侧面",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Component",
+          "name": "主开关",
+          "properties": {
+            "comp_name": "主开关",
+            "component_type": "控制开关",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Component",
+          "name": "无线遥控器",
+          "properties": {
+            "comp_name": "无线遥控器",
+            "component_type": "遥控部件",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Component",
+          "name": "仪表板开关",
+          "properties": {
+            "comp_name": "仪表板开关",
+            "component_type": "控制开关",
+            "location": "仪表板",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Component",
+          "name": "外把手",
+          "properties": {
+            "comp_name": "外把手",
+            "component_type": "把手",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Function",
+          "name": "车门自动开闭",
+          "properties": {
+            "func_name": "车门自动开闭",
+            "function_type": "车门控制",
+            "trigger_condition": "主开关打开且按下滑动车门按钮或使用车门把手",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        }
+      ],
+      "gold_edges": [
+        {
+          "label": "ACTIVATES",
+          "outV": "电动侧滑门",
+          "inV": "车门自动开闭",
+          "properties": {
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "Component",
+          "inVLabel": "Function"
+        }
+      ],
+      "candidate_vertices": [
+        {
+          "label": "Component",
+          "name": "电动滑动车门",
+          "properties": {
+            "comp_name": "电动滑动车门",
+            "component_type": "车门部件",
+            "location": "车身侧面",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "source_snippet": "当主开关打开时，如果按下遥控发射器上的电动滑动车门按钮，或仪表板上的电动滑动车门开关或使用车门把手，电动滑动车门将自动打开和关闭。"
+        },
+        {
+          "label": "Component",
+          "name": "电动滑动车门主开关",
+          "properties": {
+            "comp_name": "电动滑动车门主开关",
+            "component_type": "控制开关",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "source_snippet": "当主开关打开时"
+        },
+        {
+          "label": "Component",
+          "name": "语音助手",
+          "properties": {
+            "comp_name": "语音助手",
+            "component_type": "语音交互部件",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "source_snippet": "语音识别可用于打开车门"
+        }
+      ],
+      "candidate_edges": [
+        {
+          "label": "ACTIVATES",
+          "outV": "语音助手",
+          "inV": "电动滑动车门自动开闭",
+          "properties": {
+            "note": "语音命令触发电动滑动车门",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "Component",
+          "inVLabel": "Function",
+          "source_snippet": "使用语音助手也可以打开电动滑动车门"
+        }
+      ]
+    },
+    {
+      "sample_id": "奥德赛用户手册2023款--e9c06954_s0060",
+      "input_text": "",
+      "gold_vertices": [
+        {
+          "label": "Component",
+          "name": "驻车挡按钮",
+          "properties": {
+            "comp_name": "驻车挡按钮",
+            "component_type": "档位按钮",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Component",
+          "name": "倒挡按钮",
+          "properties": {
+            "comp_name": "倒挡按钮",
+            "component_type": "档位按钮",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Component",
+          "name": "空挡按钮",
+          "properties": {
+            "comp_name": "空挡按钮",
+            "component_type": "档位按钮",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Component",
+          "name": "前进挡按钮",
+          "properties": {
+            "comp_name": "前进挡按钮",
+            "component_type": "档位按钮",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Component",
+          "name": "自动变速箱",
+          "properties": {
+            "comp_name": "自动变速箱",
+            "component_type": "传动部件",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Component",
+          "name": "换挡拨片",
+          "properties": {
+            "comp_name": "换挡拨片",
+            "component_type": "方向盘拨片",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Status",
+          "name": "变速箱锁死",
+          "properties": {
+            "status_name": "变速箱锁死",
+            "status_type": "变速器状态",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Status",
+          "name": "运动模式已开启",
+          "properties": {
+            "status_name": "运动模式已开启",
+            "status_type": "驾驶模式状态",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Operation",
+          "name": "挂入驻车挡",
+          "properties": {
+            "op_name": "挂入驻车挡",
+            "operation_type": "档位切换",
+            "precondition": "驻车时、关闭电源或启动电源系统之前",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Operation",
+          "name": "切换到倒挡",
+          "properties": {
+            "op_name": "切换到倒挡",
+            "operation_type": "档位切换",
+            "precondition": "倒车时",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Operation",
+          "name": "挂入空挡",
+          "properties": {
+            "op_name": "挂入空挡",
+            "operation_type": "档位切换",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Operation",
+          "name": "挂入前进挡",
+          "properties": {
+            "op_name": "挂入前进挡",
+            "operation_type": "档位切换",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        }
+      ],
+      "gold_edges": [
+        {
+          "label": "OPERATES_ON",
+          "outV": "挂入驻车挡",
+          "inV": "驻车挡按钮",
+          "properties": {
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "Operation",
+          "inVLabel": "Component"
+        },
+        {
+          "label": "OPERATES_ON",
+          "outV": "切换到倒挡",
+          "inV": "倒挡按钮",
+          "properties": {
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "Operation",
+          "inVLabel": "Component"
+        },
+        {
+          "label": "OPERATES_ON",
+          "outV": "挂入空挡",
+          "inV": "空挡按钮",
+          "properties": {
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "Operation",
+          "inVLabel": "Component"
+        },
+        {
+          "label": "OPERATES_ON",
+          "outV": "挂入前进挡",
+          "inV": "前进挡按钮",
+          "properties": {
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "Operation",
+          "inVLabel": "Component"
+        },
+        {
+          "label": "HAS_STATUS",
+          "outV": "自动变速箱",
+          "inV": "变速箱锁死",
+          "properties": {
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "Component",
+          "inVLabel": "Status"
+        }
+      ],
+      "candidate_vertices": [
+        {
+          "label": "Component",
+          "name": "P按钮",
+          "properties": {
+            "comp_name": "P按钮",
+            "component_type": "档位按钮",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "source_snippet": "按下P按钮"
+        },
+        {
+          "label": "Component",
+          "name": "D按钮",
+          "properties": {
+            "comp_name": "D按钮",
+            "component_type": "档位按钮",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "source_snippet": "按下D按钮"
+        },
+        {
+          "label": "Component",
+          "name": "变速器",
+          "properties": {
+            "comp_name": "变速器",
+            "component_type": "传动部件",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "source_snippet": "变速器锁止"
+        },
+        {
+          "label": "Component",
+          "name": "自适应巡航按钮",
+          "properties": {
+            "comp_name": "自适应巡航按钮",
+            "component_type": "驾驶辅助按钮",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "source_snippet": "自适应巡航开关默认关闭"
+        },
+        {
+          "label": "Operation",
+          "name": "按下P按钮",
+          "properties": {
+            "op_name": "按下P按钮",
+            "operation_type": "档位切换",
+            "precondition": "驻车时、关闭电源或启动电源系统之前",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "source_snippet": "按下P按钮。驻车时、关闭电源或启动电源系统之前使用"
+        },
+        {
+          "label": "Operation",
+          "name": "按下D按钮",
+          "properties": {
+            "op_name": "按下D按钮",
+            "operation_type": "档位切换",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "source_snippet": "按下D按钮"
+        }
+      ],
+      "candidate_edges": [
+        {
+          "label": "OPERATES_ON",
+          "outV": "按下P按钮",
+          "inV": "P按钮",
+          "properties": {
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "Operation",
+          "inVLabel": "Component",
+          "source_snippet": "按下P按钮"
+        },
+        {
+          "label": "OPERATES_ON",
+          "outV": "按下D按钮",
+          "inV": "D按钮",
+          "properties": {
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "Operation",
+          "inVLabel": "Component",
+          "source_snippet": "按下D按钮"
+        }
+      ]
+    },
+    {
+      "sample_id": "奥德赛用户手册2023款--e9c06954_s0105",
+      "input_text": "",
+      "gold_vertices": [
+        {
+          "label": "Component",
+          "name": "三点式座椅安全带",
+          "properties": {
+            "comp_name": "三点式座椅安全带",
+            "component_type": "安全约束部件",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Component",
+          "name": "急停锁止卷收器",
+          "properties": {
+            "comp_name": "急停锁止卷收器",
+            "component_type": "安全带部件",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Function",
+          "name": "维持安全带张力",
+          "properties": {
+            "func_name": "维持安全带张力",
+            "function_type": "安全带保护",
+            "trigger_condition": "正常驾驶时",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        },
+        {
+          "label": "Function",
+          "name": "紧急锁死约束",
+          "properties": {
+            "func_name": "紧急锁死约束",
+            "function_type": "安全带保护",
+            "trigger_condition": "发生碰撞或突然制动时",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          }
+        }
+      ],
+      "gold_edges": [
+        {
+          "label": "ACTIVATES",
+          "outV": "急停锁止卷收器",
+          "inV": "维持安全带张力",
+          "properties": {
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "Component",
+          "inVLabel": "Function"
+        },
+        {
+          "label": "ACTIVATES",
+          "outV": "急停锁止卷收器",
+          "inV": "紧急锁死约束",
+          "properties": {
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "Component",
+          "inVLabel": "Function"
+        }
+      ],
+      "candidate_vertices": [
+        {
+          "label": "Component",
+          "name": "安全带",
+          "properties": {
+            "comp_name": "安全带",
+            "component_type": "安全约束部件",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "source_snippet": "安全带在以下各类碰撞中都能为您提供保护"
+        },
+        {
+          "label": "Component",
+          "name": "紧急锁止卷收器",
+          "properties": {
+            "comp_name": "紧急锁止卷收器",
+            "component_type": "安全带部件",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "source_snippet": "带紧急锁止卷收器的三点式安全带"
+        },
+        {
+          "label": "Function",
+          "name": "预紧力保持",
+          "properties": {
+            "func_name": "预紧力保持",
+            "function_type": "安全带保护",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "source_snippet": "卷收器可在保持安全带预紧力"
+        }
+      ],
+      "candidate_edges": [
+        {
+          "label": "HAS_COMPONENT",
+          "outV": "奥德赛",
+          "inV": "安全带",
+          "properties": {
+            "note": "车辆座位配备安全带",
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "VehicleModel",
+          "inVLabel": "Component",
+          "source_snippet": "车辆上所有四个或七个座位都配有带紧急锁止卷收器的三点式安全带"
+        },
+        {
+          "label": "HAS_COMPONENT",
+          "outV": "奥德赛",
+          "inV": "紧急锁止卷收器",
+          "properties": {
+            "vehicle_brand": "本田",
+            "vehicle_model": "奥德赛"
+          },
+          "outVLabel": "VehicleModel",
+          "inVLabel": "Component",
+          "source_snippet": "带紧急锁止卷收器的三点式安全带"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "gold_source": "hugegraph-llm/src/hugegraph_llm/benchmark/data/fixtures/car_docs_mode/gold",
+    "candidate_source": "hugegraph-llm/src/hugegraph_llm/benchmark/data/fixtures/car_docs_mode/docs_run_regressed",
+    "candidate": "pipeline",
+    "gold_count": 3,
+    "matched_count": 3,
+    "sample_count": 3,
+    "missing_candidate_chunks": [],
+    "empty_candidate_chunks": []
+  }
+}

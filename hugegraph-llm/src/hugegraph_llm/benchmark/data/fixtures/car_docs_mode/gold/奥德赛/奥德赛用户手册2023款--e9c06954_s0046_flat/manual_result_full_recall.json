@@ -1,0 +1,87 @@
+{
+  "chunk_id": "奥德赛用户手册2023款--e9c06954_s0046",
+  "doc_name": "奥德赛用户手册2023款.md",
+  "heading_path": "电动滑动车门",
+  "source_section": "电动滑动车门",
+  "vehicle_brand": "本田",
+  "vehicle_model": "奥德赛",
+  "manual_extract_notes": "docs-mode gold; 名称做同义归一化，与 candidate 从原文抽出的字面名可能不同。",
+  "vertices": [
+    {
+      "type": "Component",
+      "name": "电动侧滑门",
+      "properties": {
+        "comp_name": "电动侧滑门",
+        "component_type": "车门部件",
+        "location": "车身侧面",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Component",
+      "name": "主开关",
+      "properties": {
+        "comp_name": "主开关",
+        "component_type": "控制开关",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Component",
+      "name": "无线遥控器",
+      "properties": {
+        "comp_name": "无线遥控器",
+        "component_type": "遥控部件",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Component",
+      "name": "仪表板开关",
+      "properties": {
+        "comp_name": "仪表板开关",
+        "component_type": "控制开关",
+        "location": "仪表板",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Component",
+      "name": "外把手",
+      "properties": {
+        "comp_name": "外把手",
+        "component_type": "把手",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Function",
+      "name": "车门自动开闭",
+      "properties": {
+        "func_name": "车门自动开闭",
+        "function_type": "车门控制",
+        "trigger_condition": "主开关打开且按下滑动车门按钮或使用车门把手",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "type": "ACTIVATES",
+      "source_type": "Component",
+      "source_name": "电动侧滑门",
+      "target_type": "Function",
+      "target_name": "车门自动开闭",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    }
+  ]
+}

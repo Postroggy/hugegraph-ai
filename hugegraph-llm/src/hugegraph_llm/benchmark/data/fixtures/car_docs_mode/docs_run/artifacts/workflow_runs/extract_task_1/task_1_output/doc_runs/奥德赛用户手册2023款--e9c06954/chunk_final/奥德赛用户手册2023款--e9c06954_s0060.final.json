@@ -1,0 +1,219 @@
+{
+  "chunk_id": "奥德赛用户手册2023款--e9c06954_s0060",
+  "heading_path": "驻车档 > 倒车档 > 空档 > 驾驶档",
+  "source_section": "驾驶档",
+  "line_start": 628,
+  "line_end": 654,
+  "vertices": [
+    {
+      "type": "Component",
+      "name": "P按钮",
+      "aliases": ["驻车档按钮"],
+      "properties": {
+        "comp_name": "P按钮",
+        "component_type": "档位按钮",
+        "location": "变速控制区",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下P按钮"
+    },
+    {
+      "type": "Component",
+      "name": "R按钮",
+      "aliases": ["倒车档按钮"],
+      "properties": {
+        "comp_name": "R按钮",
+        "component_type": "档位按钮",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "向后按R按钮"
+    },
+    {
+      "type": "Component",
+      "name": "N按钮",
+      "aliases": ["空档按钮"],
+      "properties": {
+        "comp_name": "N按钮",
+        "component_type": "档位按钮",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下N按钮"
+    },
+    {
+      "type": "Component",
+      "name": "D按钮",
+      "aliases": ["驾驶档按钮"],
+      "properties": {
+        "comp_name": "D按钮",
+        "component_type": "档位按钮",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下D按钮"
+    },
+    {
+      "type": "Component",
+      "name": "变速器",
+      "aliases": [],
+      "properties": {
+        "comp_name": "变速器",
+        "component_type": "传动部件",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "变速器锁止"
+    },
+    {
+      "type": "Component",
+      "name": "减速拨片",
+      "aliases": [],
+      "properties": {
+        "comp_name": "减速拨片",
+        "component_type": "方向盘拨片",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "可临时使用减速拨片"
+    },
+    {
+      "type": "Status",
+      "name": "变速器锁止",
+      "aliases": [],
+      "properties": {
+        "status_name": "变速器锁止",
+        "status_type": "变速器状态",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "变速器锁止"
+    },
+    {
+      "type": "Status",
+      "name": "SPORT模式打开",
+      "aliases": [],
+      "properties": {
+        "status_name": "SPORT模式打开",
+        "status_type": "驾驶模式状态",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "当 SPORT 模式打开时，可以使用减速拨片"
+    },
+    {
+      "type": "Operation",
+      "name": "按下P按钮",
+      "aliases": [],
+      "properties": {
+        "op_name": "按下P按钮",
+        "operation_type": "档位切换",
+        "precondition": "驻车时、关闭电源或启动电源系统之前",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下P按钮。驻车时、关闭电源或启动电源系统之前使用"
+    },
+    {
+      "type": "Operation",
+      "name": "向后按R按钮",
+      "aliases": [],
+      "properties": {
+        "op_name": "向后按R按钮",
+        "operation_type": "档位切换",
+        "precondition": "倒车时",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "向后按R按钮。倒车时使用"
+    },
+    {
+      "type": "Operation",
+      "name": "按下N按钮",
+      "aliases": [],
+      "properties": {
+        "op_name": "按下N按钮",
+        "operation_type": "档位切换",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下N按钮"
+    },
+    {
+      "type": "Operation",
+      "name": "按下D按钮",
+      "aliases": [],
+      "properties": {
+        "op_name": "按下D按钮",
+        "operation_type": "档位切换",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下D按钮"
+    }
+  ],
+  "edges": [
+    {
+      "type": "OPERATES_ON",
+      "source_type": "Operation",
+      "source_name": "按下P按钮",
+      "target_type": "Component",
+      "target_name": "P按钮",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下P按钮"
+    },
+    {
+      "type": "OPERATES_ON",
+      "source_type": "Operation",
+      "source_name": "向后按R按钮",
+      "target_type": "Component",
+      "target_name": "R按钮",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "向后按R按钮"
+    },
+    {
+      "type": "OPERATES_ON",
+      "source_type": "Operation",
+      "source_name": "按下N按钮",
+      "target_type": "Component",
+      "target_name": "N按钮",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下N按钮"
+    },
+    {
+      "type": "OPERATES_ON",
+      "source_type": "Operation",
+      "source_name": "按下D按钮",
+      "target_type": "Component",
+      "target_name": "D按钮",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下D按钮"
+    },
+    {
+      "type": "HAS_STATUS",
+      "source_type": "Component",
+      "source_name": "变速器",
+      "target_type": "Status",
+      "target_name": "变速器锁止",
+      "properties": {
+        "note": "按下P按钮后变速器锁止",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下P按钮。驻车时、关闭电源或启动电源系统之前使用。变速器锁止"
+    }
+  ]
+}

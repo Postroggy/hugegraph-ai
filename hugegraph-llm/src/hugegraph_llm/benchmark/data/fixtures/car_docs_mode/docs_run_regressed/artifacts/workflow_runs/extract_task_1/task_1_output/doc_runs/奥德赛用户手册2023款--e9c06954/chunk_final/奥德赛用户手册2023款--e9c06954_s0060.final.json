@@ -1,0 +1,108 @@
+{
+  "chunk_id": "奥德赛用户手册2023款--e9c06954_s0060",
+  "heading_path": "驻车档 > 倒车档 > 空档 > 驾驶档",
+  "source_section": "驾驶档",
+  "line_start": 628,
+  "line_end": 654,
+  "vertices": [
+    {
+      "type": "Component",
+      "name": "P按钮",
+      "aliases": [],
+      "properties": {
+        "comp_name": "P按钮",
+        "component_type": "档位按钮",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下P按钮"
+    },
+    {
+      "type": "Component",
+      "name": "D按钮",
+      "aliases": [],
+      "properties": {
+        "comp_name": "D按钮",
+        "component_type": "档位按钮",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下D按钮"
+    },
+    {
+      "type": "Component",
+      "name": "变速器",
+      "aliases": [],
+      "properties": {
+        "comp_name": "变速器",
+        "component_type": "传动部件",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "变速器锁止"
+    },
+    {
+      "type": "Component",
+      "name": "自适应巡航按钮",
+      "aliases": [],
+      "properties": {
+        "comp_name": "自适应巡航按钮",
+        "component_type": "驾驶辅助按钮",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "自适应巡航开关默认关闭"
+    },
+    {
+      "type": "Operation",
+      "name": "按下P按钮",
+      "aliases": [],
+      "properties": {
+        "op_name": "按下P按钮",
+        "operation_type": "档位切换",
+        "precondition": "驻车时、关闭电源或启动电源系统之前",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下P按钮。驻车时、关闭电源或启动电源系统之前使用"
+    },
+    {
+      "type": "Operation",
+      "name": "按下D按钮",
+      "aliases": [],
+      "properties": {
+        "op_name": "按下D按钮",
+        "operation_type": "档位切换",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下D按钮"
+    }
+  ],
+  "edges": [
+    {
+      "type": "OPERATES_ON",
+      "source_type": "Operation",
+      "source_name": "按下P按钮",
+      "target_type": "Component",
+      "target_name": "P按钮",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下P按钮"
+    },
+    {
+      "type": "OPERATES_ON",
+      "source_type": "Operation",
+      "source_name": "按下D按钮",
+      "target_type": "Component",
+      "target_name": "D按钮",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下D按钮"
+    }
+  ]
+}

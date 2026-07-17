@@ -1,0 +1,190 @@
+{
+  "chunk_id": "奥德赛用户手册2023款--e9c06954_s0060",
+  "doc_name": "奥德赛用户手册2023款.md",
+  "heading_path": "驻车档 > 倒车档 > 空档 > 驾驶档",
+  "source_section": "驾驶档",
+  "vehicle_brand": "本田",
+  "vehicle_model": "奥德赛",
+  "manual_extract_notes": "docs-mode gold; 名称做同义归一化，与 candidate 从原文抽出的字面名可能不同。",
+  "vertices": [
+    {
+      "type": "Component",
+      "name": "驻车挡按钮",
+      "properties": {
+        "comp_name": "驻车挡按钮",
+        "component_type": "档位按钮",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Component",
+      "name": "倒挡按钮",
+      "properties": {
+        "comp_name": "倒挡按钮",
+        "component_type": "档位按钮",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Component",
+      "name": "空挡按钮",
+      "properties": {
+        "comp_name": "空挡按钮",
+        "component_type": "档位按钮",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Component",
+      "name": "前进挡按钮",
+      "properties": {
+        "comp_name": "前进挡按钮",
+        "component_type": "档位按钮",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Component",
+      "name": "自动变速箱",
+      "properties": {
+        "comp_name": "自动变速箱",
+        "component_type": "传动部件",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Component",
+      "name": "换挡拨片",
+      "properties": {
+        "comp_name": "换挡拨片",
+        "component_type": "方向盘拨片",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Status",
+      "name": "变速箱锁死",
+      "properties": {
+        "status_name": "变速箱锁死",
+        "status_type": "变速器状态",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Status",
+      "name": "运动模式已开启",
+      "properties": {
+        "status_name": "运动模式已开启",
+        "status_type": "驾驶模式状态",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Operation",
+      "name": "挂入驻车挡",
+      "properties": {
+        "op_name": "挂入驻车挡",
+        "operation_type": "档位切换",
+        "precondition": "驻车时、关闭电源或启动电源系统之前",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Operation",
+      "name": "切换到倒挡",
+      "properties": {
+        "op_name": "切换到倒挡",
+        "operation_type": "档位切换",
+        "precondition": "倒车时",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Operation",
+      "name": "挂入空挡",
+      "properties": {
+        "op_name": "挂入空挡",
+        "operation_type": "档位切换",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Operation",
+      "name": "挂入前进挡",
+      "properties": {
+        "op_name": "挂入前进挡",
+        "operation_type": "档位切换",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "type": "OPERATES_ON",
+      "source_type": "Operation",
+      "source_name": "挂入驻车挡",
+      "target_type": "Component",
+      "target_name": "驻车挡按钮",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "OPERATES_ON",
+      "source_type": "Operation",
+      "source_name": "切换到倒挡",
+      "target_type": "Component",
+      "target_name": "倒挡按钮",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "OPERATES_ON",
+      "source_type": "Operation",
+      "source_name": "挂入空挡",
+      "target_type": "Component",
+      "target_name": "空挡按钮",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "OPERATES_ON",
+      "source_type": "Operation",
+      "source_name": "挂入前进挡",
+      "target_type": "Component",
+      "target_name": "前进挡按钮",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "HAS_STATUS",
+      "source_type": "Component",
+      "source_name": "自动变速箱",
+      "target_type": "Status",
+      "target_name": "变速箱锁死",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    }
+  ]
+}

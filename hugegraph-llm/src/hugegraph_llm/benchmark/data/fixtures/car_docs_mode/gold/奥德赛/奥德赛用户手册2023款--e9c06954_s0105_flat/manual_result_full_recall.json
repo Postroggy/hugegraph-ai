@@ -1,0 +1,77 @@
+{
+  "chunk_id": "奥德赛用户手册2023款--e9c06954_s0105",
+  "doc_name": "奥德赛用户手册2023款.md",
+  "heading_path": "安全带 > 关于安全带 > 警告 > 三点式安全带",
+  "source_section": "三点式安全带",
+  "vehicle_brand": "本田",
+  "vehicle_model": "奥德赛",
+  "manual_extract_notes": "docs-mode gold; 名称做同义归一化，与 candidate 从原文抽出的字面名可能不同。",
+  "vertices": [
+    {
+      "type": "Component",
+      "name": "三点式座椅安全带",
+      "properties": {
+        "comp_name": "三点式座椅安全带",
+        "component_type": "安全约束部件",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Component",
+      "name": "急停锁止卷收器",
+      "properties": {
+        "comp_name": "急停锁止卷收器",
+        "component_type": "安全带部件",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Function",
+      "name": "维持安全带张力",
+      "properties": {
+        "func_name": "维持安全带张力",
+        "function_type": "安全带保护",
+        "trigger_condition": "正常驾驶时",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "Function",
+      "name": "紧急锁死约束",
+      "properties": {
+        "func_name": "紧急锁死约束",
+        "function_type": "安全带保护",
+        "trigger_condition": "发生碰撞或突然制动时",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "type": "ACTIVATES",
+      "source_type": "Component",
+      "source_name": "急停锁止卷收器",
+      "target_type": "Function",
+      "target_name": "维持安全带张力",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    },
+    {
+      "type": "ACTIVATES",
+      "source_type": "Component",
+      "source_name": "急停锁止卷收器",
+      "target_type": "Function",
+      "target_name": "紧急锁死约束",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      }
+    }
+  ]
+}

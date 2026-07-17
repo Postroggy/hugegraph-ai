@@ -1,0 +1,94 @@
+{
+  "vertices": [
+    {
+      "type": "Component",
+      "name": "电动滑动车门",
+      "aliases": [],
+      "properties": {
+        "comp_name": "电动滑动车门",
+        "component_type": "车门部件",
+        "location": "车身侧面",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "当主开关打开时，如果按下遥控发射器上的电动滑动车门按钮，或仪表板上的电动滑动车门开关或使用车门把手，电动滑动车门将自动打开和关闭。"
+    },
+    {
+      "type": "Component",
+      "name": "电动滑动车门主开关",
+      "aliases": ["主开关"],
+      "properties": {
+        "comp_name": "电动滑动车门主开关",
+        "component_type": "控制开关",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "当主开关打开时"
+    },
+    {
+      "type": "Component",
+      "name": "遥控发射器",
+      "aliases": ["遥控器"],
+      "properties": {
+        "comp_name": "遥控发射器",
+        "component_type": "遥控部件",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下遥控发射器上的电动滑动车门按钮"
+    },
+    {
+      "type": "Operation",
+      "name": "按下遥控发射器上的电动滑动车门按钮",
+      "aliases": [],
+      "properties": {
+        "op_name": "按下遥控发射器上的电动滑动车门按钮",
+        "operation_type": "遥控操作",
+        "precondition": "主开关打开",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下遥控发射器上的电动滑动车门按钮"
+    },
+    {
+      "type": "Function",
+      "name": "电动滑动车门自动开闭",
+      "aliases": [],
+      "properties": {
+        "func_name": "电动滑动车门自动开闭",
+        "function_type": "车门控制",
+        "trigger_condition": "主开关打开且按下滑动车门按钮或使用车门把手",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "电动滑动车门将自动打开和关闭"
+    }
+  ],
+  "edges": [
+    {
+      "type": "OPERATES_ON",
+      "source_type": "Operation",
+      "source_name": "按下遥控发射器上的电动滑动车门按钮",
+      "target_type": "Component",
+      "target_name": "电动滑动车门",
+      "properties": {
+        "note": "遥控发射器上的按钮触发电动滑动车门开闭",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "按下遥控发射器上的电动滑动车门按钮"
+    },
+    {
+      "type": "ACTIVATES",
+      "source_type": "Component",
+      "source_name": "电动滑动车门",
+      "target_type": "Function",
+      "target_name": "电动滑动车门自动开闭",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "电动滑动车门将自动打开和关闭"
+    }
+  ]
+}

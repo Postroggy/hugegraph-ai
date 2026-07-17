@@ -1,0 +1,72 @@
+{
+  "chunk_id": "奥德赛用户手册2023款--e9c06954_s0105",
+  "heading_path": "安全带 > 关于安全带 > 警告 > 三点式安全带",
+  "source_section": "三点式安全带",
+  "line_start": 1091,
+  "line_end": 1115,
+  "vertices": [
+    {
+      "type": "Component",
+      "name": "安全带",
+      "aliases": [],
+      "properties": {
+        "comp_name": "安全带",
+        "component_type": "安全约束部件",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "安全带在以下各类碰撞中都能为您提供保护"
+    },
+    {
+      "type": "Component",
+      "name": "紧急锁止卷收器",
+      "aliases": [],
+      "properties": {
+        "comp_name": "紧急锁止卷收器",
+        "component_type": "安全带部件",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "带紧急锁止卷收器的三点式安全带"
+    },
+    {
+      "type": "Function",
+      "name": "预紧力保持",
+      "aliases": [],
+      "properties": {
+        "func_name": "预紧力保持",
+        "function_type": "安全带保护",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "卷收器可在保持安全带预紧力"
+    }
+  ],
+  "edges": [
+    {
+      "type": "HAS_COMPONENT",
+      "source_type": "VehicleModel",
+      "source_name": "奥德赛",
+      "target_type": "Component",
+      "target_name": "安全带",
+      "properties": {
+        "note": "车辆座位配备安全带",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "车辆上所有四个或七个座位都配有带紧急锁止卷收器的三点式安全带"
+    },
+    {
+      "type": "HAS_COMPONENT",
+      "source_type": "VehicleModel",
+      "source_name": "奥德赛",
+      "target_type": "Component",
+      "target_name": "紧急锁止卷收器",
+      "properties": {
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "带紧急锁止卷收器的三点式安全带"
+    }
+  ]
+}

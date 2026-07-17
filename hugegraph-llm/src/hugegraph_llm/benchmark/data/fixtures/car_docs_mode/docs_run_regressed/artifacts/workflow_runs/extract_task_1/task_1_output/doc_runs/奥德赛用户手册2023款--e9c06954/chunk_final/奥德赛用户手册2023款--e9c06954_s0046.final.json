@@ -1,0 +1,56 @@
+{
+  "vertices": [
+    {
+      "type": "Component",
+      "name": "电动滑动车门",
+      "aliases": [],
+      "properties": {
+        "comp_name": "电动滑动车门",
+        "component_type": "车门部件",
+        "location": "车身侧面",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "当主开关打开时，如果按下遥控发射器上的电动滑动车门按钮，或仪表板上的电动滑动车门开关或使用车门把手，电动滑动车门将自动打开和关闭。"
+    },
+    {
+      "type": "Component",
+      "name": "电动滑动车门主开关",
+      "aliases": ["主开关"],
+      "properties": {
+        "comp_name": "电动滑动车门主开关",
+        "component_type": "控制开关",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "当主开关打开时"
+    },
+    {
+      "type": "Component",
+      "name": "语音助手",
+      "aliases": [],
+      "properties": {
+        "comp_name": "语音助手",
+        "component_type": "语音交互部件",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "语音识别可用于打开车门"
+    }
+  ],
+  "edges": [
+    {
+      "type": "ACTIVATES",
+      "source_type": "Component",
+      "source_name": "语音助手",
+      "target_type": "Function",
+      "target_name": "电动滑动车门自动开闭",
+      "properties": {
+        "note": "语音命令触发电动滑动车门",
+        "vehicle_brand": "本田",
+        "vehicle_model": "奥德赛"
+      },
+      "source_snippet": "使用语音助手也可以打开电动滑动车门"
+    }
+  ]
+}
