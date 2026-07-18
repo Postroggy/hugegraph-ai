@@ -139,9 +139,40 @@ def _compute_extraction_faithfulness(
         logger.warning("Extraction faithfulness judgment failed: %s", e)
 
     total = len(items)
+    # 按 idx 对齐 verdicts（prompt 要求每个 verdict 带 idx）。LLM 可能漏/多/重复
+    # 返回，不能假设 verdicts 顺序或数量 == items：必须按 idx 索引，缺判的 item
+    # 保守计为不忠实（verdict=0），并对数量不一致告警，避免 faithful/total 失真。
+    verdicts_by_idx: Dict[int, Dict[str, Any]] = {}
+    for v in verdicts:
+        if not isinstance(v, dict):
+            continue
+        idx = v.get("idx")
+        if isinstance(idx, int):
+            # 重复 idx 取第一个（LLM 一对多 artefact），其余忽略。
+            if idx not in verdicts_by_idx:
+                verdicts_by_idx[idx] = v
+        else:
+            logger.warning(
+                "Extraction faithfulness: verdict missing valid idx, skipped: %r", v
+            )
+    judged = len(verdicts_by_idx)
+    if judged != total:
+        missing = sum(1 for idx in range(total) if idx not in verdicts_by_idx)
+        out_of_range = sum(1 for idx in verdicts_by_idx if idx < 0 or idx >= total)
+        logger.warning(
+            "Extraction faithfulness: LLM returned %d verdicts for %d items "
+            "(%d missing, %d out-of-range); missing items counted as unfaithful "
+            "(verdict=0), out-of-range idx ignored.",
+            judged,
+            total,
+            missing,
+            out_of_range,
+        )
+
     faithful = sum(
-        1 for v in verdicts
-        if isinstance(v, dict) and v.get("verdict") in (1, "1", True)
+        1
+        for idx in range(total)
+        if verdicts_by_idx.get(idx, {}).get("verdict") in (1, "1", True)
     )
 
     score = faithful / total if total > 0 else 0.0

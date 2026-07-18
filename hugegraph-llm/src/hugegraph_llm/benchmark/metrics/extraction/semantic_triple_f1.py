@@ -42,15 +42,12 @@ from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 
 logger = logging.getLogger(__name__)
 
-def _format_triples(edges: List[Dict[str, Any]]) -> List[str]:
-    """Format edges as indexed triple strings for the prompt."""
-    lines = []
-    for i, e in enumerate(edges):
-        out_v = str(_edge_out(e) or "?")
-        label = str(e.get("label", "") or "?")
-        in_v = str(_edge_in(e) or "?")
-        lines.append(f"[{i}] [{out_v}] --{label}--> [{in_v}]")
-    return lines
+def _format_triple(idx: int, edge: Dict[str, Any]) -> str:
+    """Format a single edge as an indexed triple prompt line (``idx`` is the local bucket index)."""
+    out_v = str(_edge_out(edge) or "?")
+    label = str(edge.get("label", "") or "?")
+    in_v = str(_edge_in(edge) or "?")
+    return f"[{idx}] [{out_v}] --{label}--> [{in_v}]"
 
 
 def _compute_semantic_triple_pr_f1(
@@ -68,7 +65,7 @@ def _compute_semantic_triple_pr_f1(
             "semantic_triple_redundancy": None,
         }
 
-    if not prediction and not reference:
+    if not prediction or not reference:
         return {
             "semantic_triple_precision": 0.0,
             "semantic_triple_recall": 0.0,
@@ -76,40 +73,45 @@ def _compute_semantic_triple_pr_f1(
             "semantic_triple_redundancy": None,
         }
 
-    gold_lines = _format_triples(reference)
-    cand_lines = _format_triples(prediction)
-
-    if not cand_lines or not gold_lines:
-        return {
-            "semantic_triple_precision": 0.0,
-            "semantic_triple_recall": 0.0,
-            "semantic_triple_f1": 0.0,
-            "semantic_triple_redundancy": None,
-        }
-
-    # TODO(perf): Same scalability issue as semantic_entity_f1 — all gold + candidate
-    # triples sent in one prompt. Triples are even more verbose than entities (3 fields
-    # each), so the problem is worse: a chunk with 150 triples on each side means
-    # 22500 implicit pair comparisons in one LLM call.
-    # Fix: group by relation label (edge type) before calling, same as the entity-label
-    # grouping plan. Relation labels are fewer and each bucket will be much smaller.
-    # Track: feat/graphrag-benchmark (same task as entity grouping).
-    prompt = get_prompt("TRIPLE_SEMANTIC_MATCH_PROMPT", language).format(
-        gold_triples="\n".join(gold_lines),
-        candidate_triples="\n".join(cand_lines),
-    )
+    # 按 relation label 分桶后逐桶 LLM 匹配（保留全局 idx）。匹配规则本就要求
+    # relation 语义等价，按 label 分桶无损（不裁切数据）；避免一次性 O(n*m) prompt
+    # 在大 chunk 时 hallucination（triples 3 字段更严重）。桶内用局部 idx 给 LLM，
+    # 返回后映射回全局 idx（gold_bucket/cand_bucket 每项是 (global_idx, edge)）。
+    gold_by_label: Dict[str, List[tuple]] = {}
+    cand_by_label: Dict[str, List[tuple]] = {}
+    for i, e in enumerate(reference):
+        gold_by_label.setdefault(str(e.get("label", "")), []).append((i, e))
+    for i, e in enumerate(prediction):
+        cand_by_label.setdefault(str(e.get("label", "")), []).append((i, e))
 
     matches: List[List[int]] = []
-    try:
-        response = retry_llm_call(llm, prompt)
-        data = _parse_json_response(response)
-        if data and isinstance(data.get("matches"), list):
-            matches = [
-                m for m in data["matches"]
-                if isinstance(m, list) and len(m) == 2
-            ]
-    except Exception as e:
-        logger.warning("Semantic triple matching failed: %s", e)
+    for label, gold_bucket in gold_by_label.items():
+        cand_bucket = cand_by_label.get(label)
+        if not cand_bucket:
+            continue
+        gold_lines = [_format_triple(li, e) for li, (_gi, e) in enumerate(gold_bucket)]
+        cand_lines = [_format_triple(li, e) for li, (_ci, e) in enumerate(cand_bucket)]
+        prompt = get_prompt("TRIPLE_SEMANTIC_MATCH_PROMPT", language).format(
+            gold_triples="\n".join(gold_lines),
+            candidate_triples="\n".join(cand_lines),
+        )
+        try:
+            response = retry_llm_call(llm, prompt)
+            data = _parse_json_response(response)
+            if data and isinstance(data.get("matches"), list):
+                for m in data["matches"]:
+                    if not (isinstance(m, list) and len(m) == 2):
+                        continue
+                    lc, lg = m[0], m[1]
+                    if (
+                        isinstance(lc, int)
+                        and isinstance(lg, int)
+                        and 0 <= lc < len(cand_bucket)
+                        and 0 <= lg < len(gold_bucket)
+                    ):
+                        matches.append([cand_bucket[lc][0], gold_bucket[lg][0]])
+        except Exception as e:
+            logger.warning("Semantic triple matching failed for label=%s: %s", label, e)
 
     # Enforce 1:1 matching (each candidate/gold at most once). The LLM may
     # return duplicate or many-to-one pairs, which would let matched exceed
@@ -140,8 +142,8 @@ def _compute_semantic_triple_pr_f1(
         deduped.append(m)
     matches = deduped
 
-    gold_count = len(gold_lines)
-    cand_count = len(cand_lines)
+    gold_count = len(reference)
+    cand_count = len(prediction)
     matched = len(matches)
     # Redundancy: share of candidates that are semantic duplicates — each
     # pointed at a gold already claimed by another candidate, so 1:1 dedup

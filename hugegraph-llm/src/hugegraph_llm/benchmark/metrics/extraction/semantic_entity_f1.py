@@ -42,17 +42,14 @@ from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 
 logger = logging.getLogger(__name__)
 
-def _format_vertices(vertices: List[Dict[str, Any]], language: str = "en") -> List[str]:
-    """Format vertices as indexed string lines for the prompt."""
-    lines = []
-    for i, v in enumerate(vertices):
-        label = v.get("label", "")
-        name = v.get("name")
-        if not name and isinstance(v.get("properties"), dict):
-            name = v["properties"].get("name", "")
-        name = str(name or "")
-        lines.append(f"[{i}] {{\"label\": \"{label}\", \"name\": \"{name}\"}}")
-    return lines
+def _format_vertex(idx: int, vertex: Dict[str, Any]) -> str:
+    """Format a single vertex as an indexed prompt line (``idx`` is the global index)."""
+    label = vertex.get("label", "")
+    name = vertex.get("name")
+    if not name and isinstance(vertex.get("properties"), dict):
+        name = vertex["properties"].get("name", "")
+    name = str(name or "")
+    return f"[{idx}] {{\"label\": \"{label}\", \"name\": \"{name}\"}}"
 
 
 def _compute_semantic_entity_pr_f1(
@@ -73,7 +70,7 @@ def _compute_semantic_entity_pr_f1(
             "semantic_entity_redundancy": None,
         }
 
-    if not prediction and not reference:
+    if not prediction or not reference:
         return {
             "semantic_entity_precision": 0.0,
             "semantic_entity_recall": 0.0,
@@ -81,41 +78,49 @@ def _compute_semantic_entity_pr_f1(
             "semantic_entity_redundancy": None,
         }
 
-    gold_lines = _format_vertices(reference, language)
-    cand_lines = _format_vertices(prediction, language)
-
-    if not cand_lines or not gold_lines:
-        return {
-            "semantic_entity_precision": 0.0,
-            "semantic_entity_recall": 0.0,
-            "semantic_entity_f1": 0.0,
-            "semantic_entity_redundancy": None,
-        }
-
-    # TODO(perf): This sends all gold + candidate entities in one prompt, requiring
-    # the LLM to implicitly compare O(n*m) pairs. On chunks with 100+ entities
-    # (observed max: gold=117, cand=123) hallucination rate rises sharply.
-    # Fix: group by label before calling — matching rules already require
-    # label equality, so splitting by label is semantically lossless and reduces
-    # each call to ~4-8 entities on average (10 distinct labels in dataset).
-    # Estimated impact: 10x smaller prompts per call, ~4-6 LLM calls per chunk
-    # instead of 1, total token cost roughly neutral. Track: feat/graphrag-benchmark.
-    prompt = get_prompt("ENTITY_SEMANTIC_MATCH_PROMPT", language).format(
-        gold_entities="\n".join(gold_lines),
-        candidate_entities="\n".join(cand_lines),
-    )
+    # 按 label 分桶后逐桶 LLM 匹配（保留全局 idx）。匹配规则本就要求 label
+    # 相等，分桶无损（不裁切数据，每个实体都进 LLM）；避免一次性 O(n*m) prompt
+    # 在大 chunk（100+ 实体）时让 LLM hallucination。每桶只含同 label 的
+    # gold/candidate，prompt 小、判断准。matches 的 idx 始终是全局 idx，桶间
+    # 合并后 dedup/计数与原逻辑一致。
+    gold_by_label: Dict[str, List[tuple]] = {}
+    cand_by_label: Dict[str, List[tuple]] = {}
+    for i, v in enumerate(reference):
+        gold_by_label.setdefault(str(v.get("label", "")), []).append((i, v))
+    for i, v in enumerate(prediction):
+        cand_by_label.setdefault(str(v.get("label", "")), []).append((i, v))
 
     matches: List[List[int]] = []
-    try:
-        response = retry_llm_call(llm, prompt)
-        data = _parse_json_response(response)
-        if data and isinstance(data.get("matches"), list):
-            matches = [
-                m for m in data["matches"]
-                if isinstance(m, list) and len(m) == 2
-            ]
-    except Exception as e:
-        logger.warning("Semantic entity matching failed: %s", e)
+    for label, gold_bucket in gold_by_label.items():
+        cand_bucket = cand_by_label.get(label)
+        if not cand_bucket:
+            continue  # 该 label 无 candidate，无匹配可判
+        # 桶内用局部 idx（0-based）给 LLM，符合 prompt example 的索引习惯；
+        # LLM 返回 [[local_cand, local_gold], ...]，这里映射回全局 idx
+        # （gold_bucket/cand_bucket 每项是 (global_idx, vertex)）。
+        gold_lines = [_format_vertex(li, v) for li, (_gi, v) in enumerate(gold_bucket)]
+        cand_lines = [_format_vertex(li, v) for li, (_ci, v) in enumerate(cand_bucket)]
+        prompt = get_prompt("ENTITY_SEMANTIC_MATCH_PROMPT", language).format(
+            gold_entities="\n".join(gold_lines),
+            candidate_entities="\n".join(cand_lines),
+        )
+        try:
+            response = retry_llm_call(llm, prompt)
+            data = _parse_json_response(response)
+            if data and isinstance(data.get("matches"), list):
+                for m in data["matches"]:
+                    if not (isinstance(m, list) and len(m) == 2):
+                        continue
+                    lc, lg = m[0], m[1]
+                    if (
+                        isinstance(lc, int)
+                        and isinstance(lg, int)
+                        and 0 <= lc < len(cand_bucket)
+                        and 0 <= lg < len(gold_bucket)
+                    ):
+                        matches.append([cand_bucket[lc][0], gold_bucket[lg][0]])
+        except Exception as e:
+            logger.warning("Semantic entity matching failed for label=%s: %s", label, e)
 
     # Enforce 1:1 matching (each candidate/gold at most once). The LLM may
     # return duplicate or many-to-one pairs, which would let matched exceed
@@ -146,8 +151,8 @@ def _compute_semantic_entity_pr_f1(
         deduped.append(m)
     matches = deduped
 
-    gold_count = len(gold_lines)
-    cand_count = len(cand_lines)
+    gold_count = len(reference)
+    cand_count = len(prediction)
     matched = len(matches)
     # Redundancy: share of candidates that are semantic duplicates — each
     # pointed at a gold already claimed by another candidate, so 1:1 dedup
