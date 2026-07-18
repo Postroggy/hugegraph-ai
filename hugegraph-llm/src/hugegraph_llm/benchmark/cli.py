@@ -154,11 +154,10 @@ def _create_llm_client(settings: Optional[Any] = None) -> tuple[Optional[Any], D
     Returns:
         (llm_client, metadata_dict). If creation fails, returns (None, {}).
     """
-    # Force logs to stderr before importing config: config's module-level
-    # ``LLMConfig()`` may emit errors via the ``llm`` logger, whose default
-    # Rich handler writes to stdout and would corrupt the JSON report.
-    import hugegraph_llm.utils.log  # noqa: F401  # side-effect: attaches handlers
-
+    # Configure logs to stderr so config/import errors don't corrupt the JSON
+    # report on stdout. Previously imported hugegraph_llm.utils.log for its
+    # side-effect handlers, but that pulls in pyhugegraph; _configure_cli_logging
+    # sets up stderr on its own.
     _configure_cli_logging()
     return create_judge_llm(settings)
 
@@ -170,11 +169,9 @@ def _create_llm_client(settings: Optional[Any] = None) -> tuple[Optional[Any], D
 
 def _handle_run(args: argparse.Namespace) -> None:
     """Handle the ``run`` sub-command."""
-    # Force logs to stderr before evaluate() imports llm_settings (which
-    # emits via the ``llm`` logger) so the JSON / Markdown report on stdout
-    # stays clean — including in --offline mode, where evaluate still imports
-    # the config even though no LLM calls are made.
-    import hugegraph_llm.utils.log  # noqa: F401  # side-effect: attaches handlers
+    # Force logs to stderr so the JSON / Markdown report on stdout stays clean.
+    # Previously imported hugegraph_llm.utils.log for side-effect handlers, but
+    # that pulls in pyhugegraph; _configure_cli_logging sets up stderr on its own.
     _configure_cli_logging()
     data_path: str = args.data
     if not _check_data_file(data_path):
