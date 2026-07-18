@@ -89,9 +89,26 @@ def create_judge_llm(settings: Optional[Any] = None) -> Tuple[Optional[JudgeLLM]
         LLM-Judge metrics return ``None`` scores.
     """
     try:
-        from hugegraph_llm.config import llm_settings
+        if settings is not None:
+            cfg = settings
+        else:
+            # 自己读 hugegraph-llm/.env，避免 import hugegraph_llm.config
+            # （它链式依赖 pyhugegraph/hugegraph-python-client，与 judge client 无关）。
+            import os
+            from pathlib import Path
+            from types import SimpleNamespace
 
-        cfg = settings if settings is not None else llm_settings
+            from dotenv import load_dotenv
+
+            _env_path = Path(__file__).resolve().parents[4] / ".env"
+            if _env_path.is_file():
+                load_dotenv(_env_path)
+            cfg = SimpleNamespace(
+                openai_chat_api_key=os.environ.get("OPENAI_CHAT_API_KEY"),
+                openai_chat_api_base=os.environ.get("OPENAI_CHAT_API_BASE"),
+                openai_chat_language_model=os.environ.get("OPENAI_CHAT_LANGUAGE_MODEL"),
+                openai_chat_tokens=os.environ.get("OPENAI_CHAT_TOKENS"),
+            )
         model = getattr(cfg, "openai_chat_language_model", None) or "gpt-4.1-mini"
         client = OpenAI(
             api_key=getattr(cfg, "openai_chat_api_key", None) or "",
@@ -99,7 +116,7 @@ def create_judge_llm(settings: Optional[Any] = None) -> Tuple[Optional[JudgeLLM]
         )
         temperature = 0.0
         seed = 42
-        max_tokens = getattr(cfg, "openai_chat_tokens", None) or 2048
+        max_tokens = int(getattr(cfg, "openai_chat_tokens", None) or 2048)
 
         llm = JudgeLLM(client, model, temperature, seed, max_tokens)
         logger.info(
