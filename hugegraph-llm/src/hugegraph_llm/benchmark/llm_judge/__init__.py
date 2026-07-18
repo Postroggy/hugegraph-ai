@@ -17,13 +17,9 @@
 
 """LLM-based judges for benchmark answer evaluation."""
 
-from hugegraph_llm.benchmark.llm_judge.base import LLMJudge
 from hugegraph_llm.benchmark.llm_judge.judge_utils import clean_contexts, parse_json_response, retry_llm_call
-from hugegraph_llm.benchmark.llm_judge.mock_judge import MockJudge
 
 __all__ = [
-    "LLMJudge",
-    "MockJudge",
     "clean_contexts",
     "parse_json_response",
     "retry_llm_call",
