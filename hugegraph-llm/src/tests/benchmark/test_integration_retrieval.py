@@ -34,7 +34,7 @@ _ZH_RETRIEVAL_DATA = os.path.join(_SAMPLES_DIR, 'chinese_retrieval_sample.json')
 def test_retrievalrunnerintegration_retrieval_runner_runs_successfully():
     """Run RetrievalRunner on retrieval_docid_sample.json with standard metrics."""
     runner = RetrievalRunner()
-    result = runner.run(data_path=_RETRIEVAL_DATA, metrics=['recall_at_k', 'hit_at_k', 'mrr'])
+    result = runner.run(data=_RETRIEVAL_DATA, metrics=['recall_at_k', 'hit_at_k', 'mrr'])
     assert len(result.samples) == 3
     assert 'recall@1' in result.overall
     assert 'mrr' in result.overall
@@ -43,7 +43,7 @@ def test_retrievalrunnerintegration_retrieval_runner_runs_successfully():
 def test_retrievalrunnerintegration_retrieval_runner_all_metrics_present():
     """Verify that every sample has all expected metric keys."""
     runner = RetrievalRunner()
-    result = runner.run(data_path=_RETRIEVAL_DATA, metrics=['recall_at_k', 'hit_at_k', 'mrr'])
+    result = runner.run(data=_RETRIEVAL_DATA, metrics=['recall_at_k', 'hit_at_k', 'mrr'])
     expected_keys = set()
     for k in [1, 5, 10, 20]:
         expected_keys.add(f'recall@{k}')
@@ -58,7 +58,7 @@ def test_retrievalrunnerintegration_retrieval_runner_all_metrics_present():
 def test_retrievalrunnerintegration_chinese_sample_runs_successfully():
     """Chinese retrieval sample keeps Issue #75 sample coverage explicit."""
     runner = RetrievalRunner()
-    result = runner.run(data_path=_ZH_RETRIEVAL_DATA, metrics=['recall_at_k', 'hit_at_k', 'mrr'], language='zh')
+    result = runner.run(data=_ZH_RETRIEVAL_DATA, metrics=['recall_at_k', 'hit_at_k', 'mrr'], language='zh')
     assert len(result.samples) == 2
     assert result.overall['recall@1'] == 0.75
     assert result.overall['mrr'] == 1.0
@@ -68,4 +68,4 @@ def test_retrievalrunnerintegration_context_metric_requires_llm():
     """Context/LLM metrics fail fast instead of producing None-valued overall metrics."""
     runner = RetrievalRunner()
     with pytest.raises(ValueError, match='require an LLM client'):
-        runner.run(data_path=_RETRIEVAL_CONTEXT_DATA, metrics=['context_relevancy'])
+        runner.run(data=_RETRIEVAL_CONTEXT_DATA, metrics=['context_relevancy'])

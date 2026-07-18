@@ -41,19 +41,18 @@ class AnswerRunner(BaseRunner):
             ]
         }
 
-    The answer field name defaults to ``graph_vector_answer`` so that the
-    retrieval outputs produced by ``generate_hugegraph_retrieval_outputs.py``
-    can be evaluated directly without the 4-mode expansion performed by
-    ``AblationRunner``.
+    The candidate answer is read from the ``answer`` field. Callers whose
+    pipeline produces a differently-named field (e.g. ``graph_vector_answer``)
+    should normalize it to ``answer`` before evaluation rather than relying
+    on a per-runner key override.
     """
 
-    def __init__(self, answer_key: str = "graph_vector_answer", max_workers: int = 20) -> None:
+    def __init__(self, max_workers: int = 20) -> None:
         super().__init__(max_workers=max_workers)
-        self.answer_key = answer_key
 
     def run(
         self,
-        data_path: str,
+        data: Any,
         metrics: List[str],
         language: str = "en",
         llm: Any = None,
@@ -61,7 +60,8 @@ class AnswerRunner(BaseRunner):
         """Execute single-answer benchmark.
 
         Args:
-            data_path: Path to the JSON data file.
+            data: Benchmark data — an in-memory dict (operator path) or
+                a path to a JSON file (CLI path).
             metrics: List of metric names to evaluate.
             language: Language code ('en' or 'zh').
             llm: Optional LLM instance for LLM-based metrics.
@@ -70,7 +70,8 @@ class AnswerRunner(BaseRunner):
             Aggregated BenchmarkResult.
         """
         self._errors.clear()
-        data = self._load_data(data_path)
+        source = data
+        data = self._resolve_data(data)
 
         samples = data.get("samples", [])
 
@@ -80,8 +81,7 @@ class AnswerRunner(BaseRunner):
             mode="answer",
             language=language,
             metrics=metrics,
-            data_path=data_path,
-            answer_key=self.answer_key,
+            data_path=source if isinstance(source, str) else None,
         )
 
         def process_sample(sample: Dict[str, Any]) -> SampleResult:
@@ -90,7 +90,7 @@ class AnswerRunner(BaseRunner):
                 sample_id=sample_id,
                 question_type=sample.get("question_type"),
             )
-            prediction = sample.get(self.answer_key, "")
+            prediction = sample.get("answer", "")
             reference = sample.get("gold_answer", "")
             context = sample.get("retrieved_contexts", [])
 

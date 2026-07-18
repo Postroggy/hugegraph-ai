@@ -123,7 +123,7 @@ class RetrievalRunner(BaseRunner):
 
     def run(
         self,
-        data_path: str,
+        data: Any,
         metrics: List[str],
         k_list: Optional[List[int]] = None,
         language: str = "en",
@@ -132,7 +132,8 @@ class RetrievalRunner(BaseRunner):
         """Execute retrieval benchmark.
 
         Args:
-            data_path: Path to the JSON data file.
+            data: Benchmark data — an in-memory dict (operator path) or
+                a path to a JSON file (CLI path).
             metrics: List of metric names to evaluate.
             k_list: K values for rank-based metrics (e.g. [1, 5, 10]).
             language: Language code ('en' or 'zh') for LLM-Judge prompts.
@@ -144,7 +145,8 @@ class RetrievalRunner(BaseRunner):
         self._errors.clear()
         if set(metrics) & _CONTEXT_METRICS and llm is None:
             raise ValueError("Retrieval context metrics require an LLM client")
-        data = self._load_data(data_path)
+        source = data
+        data = self._resolve_data(data)
 
         samples = data.get("samples", [])
         for sample in samples:
@@ -160,7 +162,7 @@ class RetrievalRunner(BaseRunner):
             metrics=metrics,
             k_list=k_list,
             language=language,
-            data_path=data_path,
+            data_path=source if isinstance(source, str) else None,
         )
 
         def process_sample(sample: Dict[str, Any]) -> SampleResult:

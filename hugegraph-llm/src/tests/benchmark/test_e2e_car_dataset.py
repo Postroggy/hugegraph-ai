@@ -45,7 +45,7 @@ def _run_cli(*args: str, timeout: int = 60) -> subprocess.CompletedProcess:
 def test_cardatasetentityf1_car_dataset_entity_f1_positive():
     """Both samples should have entity_f1 > 0."""
     runner = ExtractionRunner()
-    result = runner.run(data_path=_CAR_DATA, metrics=['entity_f1'], language='zh')
+    result = runner.run(data=_CAR_DATA, metrics=['entity_f1'], language='zh')
     assert len(result.samples) == 2
     for sample in result.samples:
         assert sample.metrics['entity_f1'] > 0, f'Sample {sample.sample_id} has entity_f1 <= 0'
@@ -54,7 +54,7 @@ def test_cardatasetentityf1_car_dataset_entity_f1_positive():
 def test_cardatasettriplef1_car_dataset_triple_f1_positive():
     """Both samples should have triple_f1 > 0."""
     runner = ExtractionRunner()
-    result = runner.run(data_path=_CAR_DATA, metrics=['triple_f1'], language='zh')
+    result = runner.run(data=_CAR_DATA, metrics=['triple_f1'], language='zh')
     assert len(result.samples) == 2
     for sample in result.samples:
         assert sample.metrics['triple_f1'] > 0, f'Sample {sample.sample_id} has triple_f1 <= 0'
@@ -63,7 +63,7 @@ def test_cardatasettriplef1_car_dataset_triple_f1_positive():
 def test_cardatasetschemavalidity_car_dataset_schema_validity():
     """Run with schema_validity metric; verify type_constraint_pass appears."""
     runner = ExtractionRunner()
-    result = runner.run(data_path=_CAR_DATA, metrics=['schema_validity'], language='zh')
+    result = runner.run(data=_CAR_DATA, metrics=['schema_validity'], language='zh')
     assert len(result.samples) == 2
     for sample in result.samples:
         assert 'type_constraint_pass' in sample.metrics, f'Sample {sample.sample_id} missing type_constraint_pass'
@@ -72,7 +72,7 @@ def test_cardatasetschemavalidity_car_dataset_schema_validity():
 def test_cardatasetpeugeotperfectmatch_car_dataset_peugeot_perfect_match():
     """For Peugeot sample (candidate == gold), entity_f1 and triple_f1 should be 1.0."""
     runner = ExtractionRunner()
-    result = runner.run(data_path=_CAR_DATA, metrics=['entity_f1', 'triple_f1'], language='zh')
+    result = runner.run(data=_CAR_DATA, metrics=['entity_f1', 'triple_f1'], language='zh')
     peugeot = next((s for s in result.samples if s.sample_id == 'car_peugeot_5008'))
     assert peugeot.metrics['entity_f1'] == 1.0
     assert peugeot.metrics['triple_f1'] == 1.0

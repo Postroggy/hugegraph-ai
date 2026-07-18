@@ -46,7 +46,7 @@ def test_retrievalrunner_fails_fast_when_ranking_metric_missing_doc_ids(tmp_path
 
     runner = RetrievalRunner(max_workers=1)
     with pytest.raises(ValueError) as exc_info:
-        runner.run(data_path=str(data_path), metrics=["recall_at_k"], k_list=[1])
+        runner.run(data=str(data_path), metrics=["recall_at_k"], k_list=[1])
 
     message = str(exc_info.value)
     assert "gold_doc_ids" in message
@@ -78,7 +78,7 @@ def test_retrievalrunner_context_metrics_only_do_not_require_doc_ids(tmp_path):
 
     runner = RetrievalRunner(max_workers=1)
     result = runner.run(
-        data_path=str(data_path),
+        data=str(data_path),
         metrics=["context_precision"],
         k_list=[1],
         llm=_FakeLLM(),
@@ -108,5 +108,5 @@ def test_retrievalrunner_rejects_non_list_doc_ids(tmp_path):
 
     runner = RetrievalRunner(max_workers=1)
     with pytest.raises(ValueError) as exc_info:
-        runner.run(data_path=str(data_path), metrics=["recall_at_k"], k_list=[1])
+        runner.run(data=str(data_path), metrics=["recall_at_k"], k_list=[1])
     assert "must be a list" in str(exc_info.value)

@@ -123,7 +123,7 @@ def test_clirunall_skips_unsupported_modes_for_single_schema():
     assert result.returncode == 0, f'stderr: {result.stderr}'
     output = json.loads(result.stdout)
     assert output['meta']['mode'] == 'extraction'
-    assert output['meta']['skipped_modes'] == ['retrieval', 'ablation']
+    assert output['meta']['skipped_modes'] == ['retrieval', 'answer']
 
 
 def test_clirunall_output_uses_envelope_for_multiple_results(tmp_path):
@@ -171,7 +171,7 @@ def test_clirunall_output_uses_envelope_for_multiple_results(tmp_path):
     )
     assert result.returncode == 0, f'stderr: {result.stderr}'
     output = json.loads(output_path.read_text(encoding='utf-8'))
-    assert set(output['results']) == {'extraction', 'retrieval', 'ablation'}
+    assert set(output['results']) == {'extraction', 'retrieval', 'answer'}
 
 
 def test_clirunretrieval_rejects_mode_mismatched_metric():
@@ -258,7 +258,7 @@ def test_createllmclient_uses_fixed_judge_params():
     fake_client = MagicMock()
     fake_client.chat.completions.create.return_value = fake_response
 
-    with patch("hugegraph_llm.benchmark.cli.OpenAI", return_value=fake_client) as mock_openai:
+    with patch("hugegraph_llm.benchmark.llm_judge.client.OpenAI", return_value=fake_client) as mock_openai:
         llm, meta = _create_llm_client(settings=_FakeSettings())
 
     assert meta == {"model": "test-model", "temperature": 0.0, "seed": 42}

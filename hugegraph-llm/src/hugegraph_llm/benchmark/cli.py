@@ -23,13 +23,12 @@ import logging
 import sys
 from typing import Any, Dict, List, Optional
 
-from openai import OpenAI
-
 # Ensure all metrics are registered before any runner is used. Importing the
 # package runs metrics/__init__.py, which imports every metric subpackage so
 # each metric self-registers via MetricRegistry.
 import hugegraph_llm.benchmark.metrics  # noqa: F401
 from hugegraph_llm.benchmark.baseline.compare import BaselineComparator
+from hugegraph_llm.benchmark.llm_judge.client import create_judge_llm
 from hugegraph_llm.benchmark.baseline.store import BaselineStore
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 from hugegraph_llm.benchmark.models.result import BenchmarkResult
@@ -45,12 +44,12 @@ logger = logging.getLogger(__name__)
 _DEFAULT_METRICS = {
     "extraction": ["entity_f1", "triple_f1", "schema_validity"],
     "retrieval": ["recall_at_k", "hit_at_k", "mrr"],
-    "ablation": ["token_f1", "exact_match", "rouge_l"],
+    "answer": ["token_f1", "exact_match", "rouge_l"],
 }
 
 # Full allow-list per mode: the defaults above plus opt-in metrics valid for
 # that mode. ``--metrics`` selections are kept iff they belong to the target
-# mode's list, so ``--mode ablation --metrics coverage`` works while
+# mode's list, so ``--mode answer --metrics coverage`` works while
 # ``--mode retrieval --metrics entity_f1`` is rejected as a mode mismatch.
 _MODE_ALLOWED_METRICS = {
     "extraction": _DEFAULT_METRICS["extraction"]
@@ -66,7 +65,7 @@ _MODE_ALLOWED_METRICS = {
         "context_relevancy",
         "evidence_recall_llm",
     ],
-    "ablation": _DEFAULT_METRICS["ablation"]
+    "answer": _DEFAULT_METRICS["answer"]
     + [
         "answer_correctness",
         "faithfulness",
@@ -143,13 +142,14 @@ def _configure_cli_logging() -> None:
 def _create_llm_client(settings: Optional[Any] = None) -> tuple[Optional[Any], Dict[str, Any]]:
     """Create an OpenAI-compatible LLM client for LLM-Judge metrics.
 
-    Uses the project's LLMConfig only for endpoint / model / credentials.
-    Generation parameters (temperature, seed) are fixed inside the benchmark
-    module to ensure reproducible judge results.
+    Thin CLI wrapper around :func:`create_judge_llm` that first forces logs
+    to stderr so config/import errors don't corrupt the JSON report on
+    stdout. The operator calls :func:`create_judge_llm` directly, without
+    this logging side effect.
 
     Args:
-        settings: Optional LLM settings object (for testing). When omitted,
-                  ``llm_settings`` is imported from ``hugegraph_llm.config``.
+        settings: Optional LLM settings object (for testing). Forwarded to
+                  :func:`create_judge_llm`.
 
     Returns:
         (llm_client, metadata_dict). If creation fails, returns (None, {}).
@@ -160,67 +160,7 @@ def _create_llm_client(settings: Optional[Any] = None) -> tuple[Optional[Any], D
     import hugegraph_llm.utils.log  # noqa: F401  # side-effect: attaches handlers
 
     _configure_cli_logging()
-
-    try:
-        from hugegraph_llm.config import llm_settings
-
-        cfg = settings if settings is not None else llm_settings
-        model = getattr(cfg, "openai_chat_language_model", None) or "gpt-4.1-mini"
-        client = OpenAI(
-            api_key=getattr(cfg, "openai_chat_api_key", None) or "",
-            base_url=getattr(cfg, "openai_chat_api_base", None),
-        )
-        temperature = 0.0
-        seed = 42
-        max_tokens = getattr(cfg, "openai_chat_tokens", None) or 2048
-
-        class _JudgeLLM:
-            """Thin wrapper exposing ``generate(prompt=...)`` over chat completions.
-
-            Uses standard OpenAI messages format (``[{role, content}]``) and
-            non-streaming chat completion calls.
-            """
-
-            def __init__(self, c, m, temp, s, mt):
-                self._c = c
-                self._m = m
-                self._temperature = temp
-                self._seed = s
-                self._max_tokens = mt
-
-            def generate(self, prompt="", messages=None, **kw):
-                msgs = messages or [{"role": "user", "content": prompt}]
-                response = self._c.chat.completions.create(
-                    model=self._m,
-                    messages=msgs,
-                    temperature=self._temperature,
-                    max_tokens=kw.get("max_tokens", self._max_tokens),
-                    seed=self._seed,
-                    # Disable reasoning/thinking for judge calls. Some chat
-                    # models on the gateway (e.g. DeepSeek-V4-Pro) emit a
-                    # reasoning_content by default, which wastes tokens and can
-                    # leak into the parsed output. Provider-specific field;
-                    # verified to disable thinking on DeepSeek-V4-Pro.
-                    extra_body={"thinking": {"type": "disabled"}},
-                )
-                return response.choices[0].message.content
-
-        llm = _JudgeLLM(client, model, temperature, seed, max_tokens)
-        logger.info(
-            "LLM client: OpenAI-compatible, model=%s, temperature=%s, seed=%s",
-            model,
-            temperature,
-            seed,
-        )
-        meta = {
-            "model": model,
-            "temperature": temperature,
-            "seed": seed,
-        }
-        return llm, meta
-    except Exception as e:
-        logger.warning("LLM client creation failed: %s. LLM-Judge metrics will be skipped.", e)
-        return None, {}
+    return create_judge_llm(settings)
 
 
 # ---------------------------------------------------------------------------
@@ -230,6 +170,12 @@ def _create_llm_client(settings: Optional[Any] = None) -> tuple[Optional[Any], D
 
 def _handle_run(args: argparse.Namespace) -> None:
     """Handle the ``run`` sub-command."""
+    # Force logs to stderr before evaluate() imports llm_settings (which
+    # emits via the ``llm`` logger) so the JSON / Markdown report on stdout
+    # stays clean — including in --offline mode, where evaluate still imports
+    # the config even though no LLM calls are made.
+    import hugegraph_llm.utils.log  # noqa: F401  # side-effect: attaches handlers
+    _configure_cli_logging()
     data_path: str = args.data
     if not _check_data_file(data_path):
         raise SystemExit(2)
@@ -287,9 +233,13 @@ def _handle_run(args: argparse.Namespace) -> None:
             return list(_DEFAULT_METRICS[mode_key])
         return _select_metrics(metrics, mode_key)
 
+    # Dispatch each resolved mode to its runner directly. The operator
+    # (evaluate) is the programmatic gold+candidate API; the CLI takes a
+    # pre-assembled --data file, so it talks to the runners directly and
+    # reuses one LLM client across modes.
     if "extraction" in modes_to_run:
         runner = ExtractionRunner(max_workers=max_workers)
-        r = runner.run(data_path=data_path, metrics=metrics_for_mode("extraction"), language=language, llm=llm)
+        r = runner.run(data=data_path, metrics=metrics_for_mode("extraction"), language=language, llm=llm)
         r.metadata["mode"] = "extraction"
         if skipped_modes:
             r.metadata["skipped_modes"] = skipped_modes
@@ -297,16 +247,16 @@ def _handle_run(args: argparse.Namespace) -> None:
 
     if "retrieval" in modes_to_run:
         runner = RetrievalRunner(max_workers=max_workers)
-        r = runner.run(data_path=data_path, metrics=metrics_for_mode("retrieval"), language=language, llm=llm)
+        r = runner.run(data=data_path, metrics=metrics_for_mode("retrieval"), language=language, llm=llm)
         r.metadata["mode"] = "retrieval"
         if skipped_modes:
             r.metadata["skipped_modes"] = skipped_modes
         results.append(r)
 
-    if "ablation" in modes_to_run:
+    if "answer" in modes_to_run:
         runner = AblationRunner(max_workers=max_workers)
-        r = runner.run(data_path=data_path, answer_metrics=metrics_for_mode("ablation"), language=language, llm=llm)
-        r.metadata["mode"] = "ablation"
+        r = runner.run(data=data_path, answer_metrics=metrics_for_mode("answer"), language=language, llm=llm)
+        r.metadata["mode"] = "answer"
         if skipped_modes:
             r.metadata["skipped_modes"] = skipped_modes
         results.append(r)
@@ -459,7 +409,7 @@ def _detect_supported_modes(data: Dict[str, Any]) -> List[str]:
         )
         for sample in samples
     ):
-        modes.append("ablation")
+        modes.append("answer")
     return modes
 
 
@@ -474,7 +424,7 @@ def _skipped_modes(requested_mode: str, modes_to_run: List[str]) -> List[str]:
     """Return mode names skipped by all-mode schema detection."""
     if requested_mode != "all":
         return []
-    return [m for m in ("extraction", "retrieval", "ablation") if m not in modes_to_run]
+    return [m for m in ("extraction", "retrieval", "answer") if m not in modes_to_run]
 
 
 def _result_envelope(results: List[BenchmarkResult]) -> Dict[str, Any]:
@@ -543,7 +493,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser = subparsers.add_parser("run", help="Run a benchmark evaluation")
     run_parser.add_argument(
         "--mode",
-        choices=["extraction", "retrieval", "ablation", "all"],
+        choices=["extraction", "retrieval", "answer", "all"],
         default="extraction",
         help="Evaluation mode (default: extraction)",
     )

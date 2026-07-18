@@ -510,6 +510,60 @@ def prepare_from_baseline(
 
 
 # ---------------------------------------------------------------------------
+# In-memory adapter (car → benchmark) for operator.evaluate
+# ---------------------------------------------------------------------------
+
+
+def build_extraction_inputs(
+    gold: List[Dict[str, Any]],
+    candidate: List[Dict[str, Any]],
+    chunk_texts: Optional[Dict[str, str]] = None,
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Convert car-format gold/candidate into benchmark format for ``evaluate``.
+
+    The car pipeline's in-memory structures — extractor draft (candidate) and
+    manual annotation (gold) — are both ``{chunk_id, vertices, edges}`` in car
+    format (vertex ``{type, name, properties}``, edge
+    ``{type, source_type, source_name, target_type, target_name, properties}``).
+    This adapter maps them losslessly to the benchmark's HugeGraph-native
+    shape (vertex ``{label, name, properties}``, edge
+    ``{label, outV, inV, outVLabel, inVLabel}``) so the operator can consume
+    them without knowing the car schema. ``ChunkPayload.text`` is passed via
+    ``chunk_texts`` and becomes ``input_text`` for ``extraction_faithfulness``.
+
+    No pairing is performed here — the operator pairs gold/candidate by
+    ``sample_id``. Callers with both sides in memory pass them straight through.
+
+    Args:
+        gold: list of ``{chunk_id, vertices, edges}`` (car format).
+        candidate: list of ``{chunk_id, vertices, edges}`` (car format).
+        chunk_texts: optional ``chunk_id →原文 text``; when present for a
+            gold chunk it is attached as ``input_text`` on the gold item.
+
+    Returns:
+        ``(gold_list, candidate_list)`` in benchmark format, each item keyed
+        by ``sample_id`` (= ``chunk_id``). ``gold_list`` items additionally
+        carry ``input_text`` when a matching chunk text was supplied.
+    """
+    chunk_texts = chunk_texts or {}
+    gold_list: List[Dict[str, Any]] = []
+    for g in gold:
+        chunk_id = g.get("chunk_id") or g.get("sample_id") or ""
+        vertices, edges = _car_graph_to_benchmark(g.get("vertices", []), g.get("edges", []))
+        item: Dict[str, Any] = {"sample_id": chunk_id, "vertices": vertices, "edges": edges}
+        text = chunk_texts.get(chunk_id, "")
+        if text:
+            item["input_text"] = text
+        gold_list.append(item)
+    candidate_list: List[Dict[str, Any]] = []
+    for c in candidate:
+        chunk_id = c.get("chunk_id") or c.get("sample_id") or ""
+        vertices, edges = _car_graph_to_benchmark(c.get("vertices", []), c.get("edges", []))
+        candidate_list.append({"sample_id": chunk_id, "vertices": vertices, "edges": edges})
+    return gold_list, candidate_list
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 

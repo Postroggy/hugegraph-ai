@@ -36,8 +36,8 @@ def test_reproducibilityextraction_same_input_same_output_extraction():
     """Run ExtractionRunner twice on same data; overall dicts should be identical."""
     runner = ExtractionRunner()
     metrics = ['entity_f1', 'triple_f1']
-    result1 = runner.run(data_path=_CAR_DATA, metrics=metrics, language='zh')
-    result2 = runner.run(data_path=_CAR_DATA, metrics=metrics, language='zh')
+    result1 = runner.run(data=_CAR_DATA, metrics=metrics, language='zh')
+    result2 = runner.run(data=_CAR_DATA, metrics=metrics, language='zh')
     assert result1.overall == result2.overall
 
 
@@ -45,15 +45,15 @@ def test_reproducibilityretrieval_same_input_same_output_retrieval():
     """Run RetrievalRunner twice on same data; overall dicts should be identical."""
     runner = RetrievalRunner()
     metrics = ['recall_at_k', 'hit_at_k', 'mrr']
-    result1 = runner.run(data_path=_RETRIEVAL_DATA, metrics=metrics)
-    result2 = runner.run(data_path=_RETRIEVAL_DATA, metrics=metrics)
+    result1 = runner.run(data=_RETRIEVAL_DATA, metrics=metrics)
+    result2 = runner.run(data=_RETRIEVAL_DATA, metrics=metrics)
     assert result1.overall == result2.overall
 
 
 def test_baselinesaveloadroundtrip_baseline_save_load_roundtrip(tmp_path):
     """Save baseline via BaselineStore.save(), load it back, compare overall values."""
     runner = ExtractionRunner()
-    result = runner.run(data_path=_CAR_DATA, metrics=['entity_f1', 'triple_f1'], language='zh')
+    result = runner.run(data=_CAR_DATA, metrics=['entity_f1', 'triple_f1'], language='zh')
     baseline_path = str(tmp_path / 'roundtrip_baseline.json')
     BaselineStore.save(result, baseline_path)
     loaded = BaselineStore.load(baseline_path)

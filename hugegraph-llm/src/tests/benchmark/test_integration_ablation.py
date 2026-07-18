@@ -33,14 +33,14 @@ _ABLATION_DATA = os.path.join(_SAMPLES_DIR, 'ablation_sample.json')
 def test_ablationrunnerintegration_ablation_runner_runs_successfully():
     """Run AblationRunner on ablation_sample.json with token_f1 and exact_match."""
     runner = AblationRunner()
-    result = runner.run(data_path=_ABLATION_DATA, answer_metrics=['token_f1', 'exact_match'], language='en')
+    result = runner.run(data=_ABLATION_DATA, answer_metrics=['token_f1', 'exact_match'], language='en')
     assert len(result.samples) == 2
 
 
 def test_ablationrunnerintegration_ablation_runner_four_modes_present():
     """Verify overall keys include prefixed metrics for all four answer modes."""
     runner = AblationRunner()
-    result = runner.run(data_path=_ABLATION_DATA, answer_metrics=['token_f1', 'exact_match'], language='en')
+    result = runner.run(data=_ABLATION_DATA, answer_metrics=['token_f1', 'exact_match'], language='en')
     modes = ['raw', 'vector_only', 'graph_only', 'graph_vector']
     for mode in modes:
         assert f'{mode}_token_f1' in result.overall, f"Missing overall key '{mode}_token_f1'"
@@ -68,4 +68,4 @@ def test_ablationrunnerintegration_missing_answer_mode_fails_fast(tmp_path):
     )
     runner = AblationRunner()
     with pytest.raises(ValueError, match='graph_vector_answer'):
-        runner.run(data_path=str(data_path), answer_metrics=['token_f1'], language='en')
+        runner.run(data=str(data_path), answer_metrics=['token_f1'], language='en')

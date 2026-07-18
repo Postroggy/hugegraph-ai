@@ -36,7 +36,7 @@ _EXTRACTION_DATA = os.path.join(_SAMPLES_DIR, 'extraction_sample.json')
 def test_extractionrunnercardataset_extraction_runner_with_car_dataset():
     """Run ExtractionRunner on car_extraction_sample.json with entity_f1 and triple_f1."""
     runner = ExtractionRunner()
-    result = runner.run(data_path=_CAR_DATA, metrics=['entity_f1', 'triple_f1'], language='zh')
+    result = runner.run(data=_CAR_DATA, metrics=['entity_f1', 'triple_f1'], language='zh')
     assert len(result.samples) == 2
     assert 0 < result.overall['entity_f1'] <= 1
     assert 0 < result.overall['triple_f1'] <= 1
@@ -51,7 +51,7 @@ def test_extractionrunnerstandardsample_extraction_runner_with_standard_sample()
     """Run on extraction_sample.json with default metrics."""
     runner = ExtractionRunner()
     metrics = ['entity_f1', 'triple_f1', 'schema_validity']
-    result = runner.run(data_path=_EXTRACTION_DATA, metrics=metrics, language='en')
+    result = runner.run(data=_EXTRACTION_DATA, metrics=metrics, language='en')
     assert 'entity_f1' in result.overall
     assert 'entity_precision' in result.overall
     assert 'entity_recall' in result.overall
@@ -67,7 +67,7 @@ def test_extractionrunnerstandardsample_extraction_runner_with_standard_sample()
 def test_extractionrunnerresultstructure_extraction_runner_benchmark_result_structure():
     """Verify BenchmarkResult has correct structure."""
     runner = ExtractionRunner()
-    result = runner.run(data_path=_CAR_DATA, metrics=['entity_f1'], language='zh')
+    result = runner.run(data=_CAR_DATA, metrics=['entity_f1'], language='zh')
     assert isinstance(result, BenchmarkResult)
     assert result.metadata['mode'] == 'extraction'
     assert result.metadata['language'] == 'zh'
@@ -87,7 +87,7 @@ def test_extractionrunnerdatacoupling_all_extraction_metrics_receive_correct_dat
         'property_f1',
         'schema_validity',
     ]
-    result = runner.run(data_path=_EXTRACTION_DATA, metrics=metrics, language='en')
+    result = runner.run(data=_EXTRACTION_DATA, metrics=metrics, language='en')
     assert 'entity_f1' in result.overall
     assert 'triple_f1' in result.overall
     assert 'property_f1' in result.overall
@@ -122,7 +122,7 @@ def test_extractionrunnerschemavalidity_receives_edges(tmp_path):
     )
 
     runner = ExtractionRunner()
-    result = runner.run(data_path=str(data_file), metrics=['schema_validity'], language='en')
+    result = runner.run(data=str(data_file), metrics=['schema_validity'], language='en')
     assert result.samples[0].metrics['illegal_edge_rate'] == 1.0
 
 
@@ -151,14 +151,14 @@ def test_extractionrunnerpropertyf1_receives_edge_properties(tmp_path):
     )
 
     runner = ExtractionRunner()
-    result = runner.run(data_path=str(data_file), metrics=['property_f1'], language='en')
+    result = runner.run(data=str(data_file), metrics=['property_f1'], language='en')
     assert result.samples[0].metrics['property_f1'] == 0.5
 
 
 def test_extractionrunnererrortracking_error_count_present_in_metadata():
     """Every result should have error_count in metadata."""
     runner = ExtractionRunner()
-    result = runner.run(data_path=_EXTRACTION_DATA, metrics=['entity_f1'], language='en')
+    result = runner.run(data=_EXTRACTION_DATA, metrics=['entity_f1'], language='en')
     assert 'error_count' in result.metadata
     assert result.metadata['error_count'] == 0
 
@@ -169,7 +169,7 @@ def test_extractionrunnererrortracking_error_tracking_with_bad_sample(tmp_path):
     data_file = tmp_path / 'bad_data.json'
     data_file.write_text(json.dumps(bad_data), encoding='utf-8')
     runner = ExtractionRunner()
-    result = runner.run(data_path=str(data_file), metrics=['entity_f1'], language='en')
+    result = runner.run(data=str(data_file), metrics=['entity_f1'], language='en')
     assert isinstance(result, BenchmarkResult)
     assert 'error_count' in result.metadata
 

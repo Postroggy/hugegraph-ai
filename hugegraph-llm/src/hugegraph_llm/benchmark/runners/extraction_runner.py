@@ -82,7 +82,7 @@ class ExtractionRunner(BaseRunner):
 
     def run(
         self,
-        data_path: str,
+        data: Any,
         metrics: List[str],
         language: str = "en",
         llm: Any = None,
@@ -90,7 +90,8 @@ class ExtractionRunner(BaseRunner):
         """Execute extraction benchmark.
 
         Args:
-            data_path: Path to the JSON data file.
+            data: Benchmark data — an in-memory dict (operator path) or
+                a path to a JSON file (CLI path).
             metrics: List of metric names to evaluate.
             language: Language code ('en' or 'zh').
             llm: Optional LLM instance for LLM-based metrics (offline mode: None).
@@ -99,7 +100,8 @@ class ExtractionRunner(BaseRunner):
             Aggregated BenchmarkResult.
         """
         self._errors.clear()
-        data = self._load_data(data_path)
+        source = data
+        data = self._resolve_data(data)
 
         schema = data.get("schema", {})
         samples = data.get("samples", [])
@@ -110,7 +112,7 @@ class ExtractionRunner(BaseRunner):
             mode="extraction",
             language=language,
             metrics=metrics,
-            data_path=data_path,
+            data_path=source if isinstance(source, str) else None,
         )
         data_meta = data.get("meta")
         if isinstance(data_meta, dict):

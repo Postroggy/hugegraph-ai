@@ -40,6 +40,13 @@ def _validate_sample_contract(sample: Dict[str, Any]) -> None:
 class AblationRunner(BaseRunner):
     """Run ablation experiment comparing four answer modes.
 
+    .. deprecated:: currently unused
+        The CLI and ``operator.evaluate`` route answer-quality evaluation
+        through ``AnswerRunner`` (single answer) instead of this 4-mode
+        study. This runner is retained for future use but has no call site
+        in this branch; ``test_integration_ablation.py`` is the only direct
+        consumer.
+
     Expected data format::
 
         {
@@ -63,7 +70,7 @@ class AblationRunner(BaseRunner):
 
     def run(
         self,
-        data_path: str,
+        data: Any,
         answer_metrics: List[str],
         language: str = "en",
         llm: Any = None,
@@ -71,7 +78,7 @@ class AblationRunner(BaseRunner):
         """Execute ablation benchmark.
 
         Args:
-            data_path: Path to the JSON data file.
+            data: Benchmark data — an in-memory dict or a path to a JSON file.
             answer_metrics: Metric names to evaluate per answer mode.
             language: Language code ('en' or 'zh').
             llm: Optional LLM instance for LLM-based metrics (offline mode: None).
@@ -80,7 +87,8 @@ class AblationRunner(BaseRunner):
             Aggregated BenchmarkResult with per-mode overall scores.
         """
         self._errors.clear()
-        data = self._load_data(data_path)
+        source = data
+        data = self._resolve_data(data)
 
         samples = data.get("samples", [])
         for sample in samples:
@@ -94,7 +102,7 @@ class AblationRunner(BaseRunner):
             mode="ablation",
             language=language,
             metrics=answer_metrics,
-            data_path=data_path,
+            data_path=source if isinstance(source, str) else None,
         )
 
         def process_sample(sample: Dict[str, Any]) -> SampleResult:

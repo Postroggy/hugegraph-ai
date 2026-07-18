@@ -83,6 +83,17 @@ class BaseRunner(ABC):
         with open(data_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
+    def _resolve_data(self, source: Any) -> dict:
+        """Accept an in-memory dict or a path to a JSON file.
+
+        The operator passes already-loaded dicts; the CLI passes file paths.
+        Centralizing this keeps each runner's ``run()`` agnostic to whether
+        the caller loaded the data already.
+        """
+        if isinstance(source, dict):
+            return source
+        return self._load_data(source)
+
     # ------------------------------------------------------------------
     # Metric helpers
     # ------------------------------------------------------------------
