@@ -21,7 +21,7 @@ import json
 
 import pytest
 
-from hugegraph_llm.benchmark.utils.graph_extract import (
+from hugegraph_llm.benchmark.utils.extraction_normalize import (
     normalize_extraction_output,
     normalize_graph_extract,
     normalize_schema,
