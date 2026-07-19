@@ -207,6 +207,22 @@ def test_clirunretrieval_rejects_offline_llm_metric():
     assert 'require online mode' in result.stderr
 
 
+def test_clirun_rejects_unknown_metric():
+    result = _run_cli(
+        'run',
+        '--mode',
+        'extraction',
+        '--data',
+        _EXTRACTION_DATA,
+        '--metrics',
+        'totally_made_up',
+        '--format',
+        'json',
+    )
+    assert result.returncode == 2
+    assert 'unknown metric' in result.stderr
+
+
 def test_clicompare_compare_two_baselines(tmp_path):
     """Generate two baselines via run+save-baseline, then compare."""
     baseline_path = str(tmp_path / 'baseline.json')
