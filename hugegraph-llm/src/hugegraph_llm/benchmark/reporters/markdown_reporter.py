@@ -115,6 +115,31 @@ def _direction_label(metric_name: str) -> str:
     return "↑ 越高越好" if MetricRegistry.is_higher_is_better(metric_name) else "↓ 越低越好"
 
 
+def _llm_failure_stats(
+    result: BenchmarkResult,
+) -> Tuple[int, int, Dict[str, Tuple[int, int]]]:
+    """Count None-valued sample-metrics (LLM call failed to produce a result).
+
+    A sample-metric is "failed" when its value is ``None`` — the LLM call
+    didn't return a usable result (retry exhausted / parse failed / all-bucket
+    failed). Metrics that eventually succeeded score a real value (even 0) and
+    are NOT counted. Returns ``(failed, total, {metric: (failed, total)})``.
+    """
+    failed = 0
+    total = 0
+    per_metric: Dict[str, Tuple[int, int]] = {}
+    for s in result.samples:
+        for m, v in s.metrics.items():
+            total += 1
+            mf, mt = per_metric.get(m, (0, 0))
+            if v is None:
+                failed += 1
+                per_metric[m] = (mf + 1, mt + 1)
+            else:
+                per_metric[m] = (mf, mt + 1)
+    return failed, total, per_metric
+
+
 # ---------------------------------------------------------------------------
 # Section 1 — 概览 (TL;DR)
 # ---------------------------------------------------------------------------
@@ -173,6 +198,9 @@ def _section_overview(
         errors = result.metadata.get("error_count") or len(result.metadata.get("errors", []))
         if errors:
             lines.append(f"- 失败样例：{errors}")
+        failed, total, _ = _llm_failure_stats(result)
+        if failed:
+            lines.append(f"- LLM 调用失败率：{failed}/{total}（{_fmt(failed / total)}）")
         lines.append("")
         return lines
 
@@ -764,6 +792,27 @@ def _section_evidence(
             if len(err) > 120:
                 err = err[:117] + "..."
             lines.append(f"| {sid} | {metric} | {err} |")
+        lines.append("")
+        lines.append("</details>")
+        lines.append("")
+
+    # LLM 调用失败导致 None 的 metric（retry 全失败 / 解析失败 / 全桶失败）。
+    # compute_overall 排除 None，所以这些 metric 的 overall 基于不完整数据；
+    # 列出来让 reviewer 自己判断结果可靠性（不设阈值、不 abort）。
+    failed, total, per_metric = _llm_failure_stats(result)
+    failed_metrics = {m: (f, t) for m, (f, t) in per_metric.items() if f > 0}
+    if failed_metrics:
+        lines.append(
+            "<details><summary>缺失 metric（LLM 调用失败，{} 个 metric 受影响）</summary>".format(
+                len(failed_metrics)
+            )
+        )
+        lines.append("")
+        lines.append("| Metric | 失败 sample / 总 sample | 失败率 |")
+        lines.append("|--------|------------------------|--------|")
+        for m in sorted(failed_metrics.keys()):
+            f, t = failed_metrics[m]
+            lines.append(f"| {m} | {f}/{t} | {_fmt(f / t)} |")
         lines.append("")
         lines.append("</details>")
         lines.append("")

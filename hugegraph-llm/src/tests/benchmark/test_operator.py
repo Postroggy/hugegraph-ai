@@ -211,6 +211,18 @@ def test_llm_failure_returns_none_not_zero():
     assert "semantic_entity_f1" in skipped
 
 
+def test_llm_failure_reported_in_markdown():
+    """LLM failure → markdown report surfaces failure rate + missing metrics."""
+    from hugegraph_llm.benchmark.reporters.markdown_reporter import MarkdownReporter
+
+    gold, cand = _gold_candidate_pair()
+    result = evaluate(gold, cand, language="en", llm=_FailingLLM())
+    report = MarkdownReporter.report(result)
+    assert "LLM 调用失败率" in report
+    assert "缺失 metric" in report
+    assert "extraction_faithfulness" in report  # listed in the missing-metric block
+
+
 def test_llm_metric_without_client_raises():
     gold, cand = _gold_candidate_pair()
     with pytest.raises(ValueError, match="require a configured LLM client"):
