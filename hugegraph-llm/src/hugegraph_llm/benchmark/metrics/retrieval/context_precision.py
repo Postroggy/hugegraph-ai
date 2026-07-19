@@ -108,12 +108,15 @@ class ContextPrecision(BaseMetric):
 
         # Judge each context for relevance
         relevances: List[int] = []
+        attempts = 0
+        successes = 0
         for ctx in contexts:
             prompt = get_prompt("CONTEXT_PRECISION_PROMPT", language).format(
                 question=question,
                 ground_truth=ground_truth,
                 context=str(ctx),
             )
+            attempts += 1
             try:
                 response = retry_llm_call(llm, prompt)
                 data = _parse_json_response(response)
@@ -122,9 +125,14 @@ class ContextPrecision(BaseMetric):
                     relevances.append(1 if verdict == "yes" else 0)
                 else:
                     relevances.append(0)
+                successes += 1
             except Exception as e:
                 logger.warning("Context precision judgment failed: %s", e)
                 relevances.append(0)
+
+        # 全部 context 的 LLM 调用都失败 → 不计分（部分失败仍保守计 0）
+        if attempts > 0 and successes == 0:
+            return {"context_precision": None}
 
         ap = _compute_average_precision(relevances)
         return {"context_precision": round(ap, 4)}

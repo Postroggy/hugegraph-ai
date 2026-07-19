@@ -91,10 +91,13 @@ def _compute_semantic_entity_pr_f1(
         cand_by_label.setdefault(str(v.get("label", "")), []).append((i, v))
 
     matches: List[List[int]] = []
+    attempts = 0
+    successes = 0
     for label, gold_bucket in gold_by_label.items():
         cand_bucket = cand_by_label.get(label)
         if not cand_bucket:
             continue  # 该 label 无 candidate，无匹配可判
+        attempts += 1
         # 桶内用局部 idx（0-based）给 LLM，符合 prompt example 的索引习惯；
         # LLM 返回 [[local_cand, local_gold], ...]，这里映射回全局 idx
         # （gold_bucket/cand_bucket 每项是 (global_idx, vertex)）。
@@ -119,8 +122,19 @@ def _compute_semantic_entity_pr_f1(
                         and 0 <= lg < len(gold_bucket)
                     ):
                         matches.append([cand_bucket[lc][0], gold_bucket[lg][0]])
+            successes += 1
         except Exception as e:
             logger.warning("Semantic entity matching failed for label=%s: %s", label, e)
+
+    # 全部 label 的 LLM 调用都失败 → 返回 None（避免 0 污染均值；部分失败
+    # 仍按保守计分——失败桶 matched=0，成功桶照常算）。
+    if attempts > 0 and successes == 0:
+        return {
+            "semantic_entity_precision": None,
+            "semantic_entity_recall": None,
+            "semantic_entity_f1": None,
+            "semantic_entity_redundancy": None,
+        }
 
     # Enforce 1:1 matching (each candidate/gold at most once). The LLM may
     # return duplicate or many-to-one pairs, which would let matched exceed

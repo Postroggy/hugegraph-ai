@@ -35,10 +35,34 @@ pytestmark = pytest.mark.unit
 
 
 class _MockLLM:
-    """LLM-Judge stand-in returning empty-match JSON (no real API call)."""
+    """LLM-Judge stand-in returning empty-result JSON (no real API call).
+
+    Returns a JSON object with every key any LLM-Judge metric might look for
+    (verdicts / matches / classifications / tp / fp / fn / score / statements /
+    facts), all empty/zero. Metrics then score 0 (e.g. empty matches → F1=0)
+    rather than None — a None would mean "LLM call failed" and the metric would
+    be excluded from overall, which hermetic tests don't want.
+    """
 
     def generate(self, prompt="", messages=None, **kw):
-        return '{"matches": []}'
+        return (
+            '{"verdicts": [], "matches": [], "classifications": [], '
+            '"tp": [], "fp": [], "fn": [], "score": 0, '
+            '"statements": [], "facts": []}'
+        )
+
+
+class _FailingLLM:
+    """LLM-Judge stand-in that always fails (raises ``LLMPermanentError`` so
+    ``retry_llm_call`` short-circuits without retrying — keeps the test fast).
+    """
+
+    def __init__(self):
+        from hugegraph_llm.benchmark.llm_judge.exceptions import LLMPermanentError
+        self._err = LLMPermanentError("simulated permanent failure")
+
+    def generate(self, prompt="", messages=None, **kw):
+        raise self._err
 
 
 @pytest.fixture(autouse=True)
@@ -165,6 +189,26 @@ def test_extraction_full_with_mock_llm():
     # full default set includes the LLM-judged metrics
     assert "extraction_faithfulness" in result.overall
     assert "semantic_entity_f1" in result.overall
+
+
+def test_llm_failure_returns_none_not_zero():
+    """LLM call failure → LLM metric None (excluded from overall), not 0.
+
+    Failed LLM-Judge metrics must return None so compute_overall skips them,
+    not 0 which would pollute the mean. Non-LLM metrics stay scored.
+    """
+    gold, cand = _gold_candidate_pair()
+    result = evaluate(gold, cand, language="en", llm=_FailingLLM())
+    # LLM-Judge metrics that actually call the LLM → None, excluded from overall
+    assert "extraction_faithfulness" not in result.overall
+    assert "semantic_entity_f1" not in result.overall
+    # non-LLM metrics still scored normally
+    assert "entity_f1" in result.overall
+    assert result.overall["entity_f1"] > 0
+    # skipped_metrics records the failed LLM metrics
+    skipped = result.metadata.get("skipped_metrics", [])
+    assert "extraction_faithfulness" in skipped
+    assert "semantic_entity_f1" in skipped
 
 
 def test_llm_metric_without_client_raises():

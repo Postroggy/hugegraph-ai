@@ -67,8 +67,12 @@ def _check_coverage(
     facts: List[str],
     response: str,
     language: str = "en",
-) -> List[Dict[str, int]]:
-    """Judge each reference fact as covered (1) or not (0) in the response."""
+) -> Optional[List[Dict[str, int]]]:
+    """Judge each reference fact as covered (1) or not (0) in the response.
+
+    Returns ``None`` when the LLM call fails or the response can't be parsed,
+    so the caller surfaces a missing score rather than a misleading 0.
+    """
     prompt = get_prompt("COVERAGE_CHECK_PROMPT", language).format(
         question=question,
         response=response,
@@ -76,24 +80,26 @@ def _check_coverage(
     )
     try:
         resp = retry_llm_call(llm, prompt)
-        data = _parse_json_response(resp)
-        if data and isinstance(data.get("classifications"), list):
-            valid: List[Dict[str, int]] = []
-            for item in data["classifications"]:
-                if not isinstance(item, dict):
-                    continue
-                attr = item.get("attributed")
-                if attr in (0, 1, "0", "1"):
-                    valid.append(
-                        {
-                            "statement": str(item.get("statement", "")),
-                            "attributed": int(attr),
-                        }
-                    )
-            return valid
     except Exception as e:
-        logger.warning("Coverage check failed: %s", e)
-    return []
+        logger.warning("Coverage check LLM call failed: %s", e)
+        return None
+    data = _parse_json_response(resp)
+    if not data or not isinstance(data.get("classifications"), list):
+        logger.warning("Coverage check: failed to parse classifications")
+        return None
+    valid: List[Dict[str, int]] = []
+    for item in data["classifications"]:
+        if not isinstance(item, dict):
+            continue
+        attr = item.get("attributed")
+        if attr in (0, 1, "0", "1"):
+            valid.append(
+                {
+                    "statement": str(item.get("statement", "")),
+                    "attributed": int(attr),
+                }
+            )
+    return valid
 
 
 @MetricRegistry.register
@@ -155,6 +161,8 @@ class Coverage(BaseMetric):
             return {"coverage": None, "coverage_ref_facts": 0, "coverage_covered": 0}
 
         judgments = _check_coverage(llm, question, facts, response, language)
+        if judgments is None:
+            return {"coverage": None, "coverage_ref_facts": len(facts), "coverage_covered": None}
         covered = sum(j["attributed"] for j in judgments)
         total = len(facts)
         score = covered / total if total else 0.0

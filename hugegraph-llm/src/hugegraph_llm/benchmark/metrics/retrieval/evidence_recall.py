@@ -112,14 +112,17 @@ class EvidenceRecallLLM(BaseMetric):
 
         try:
             response = retry_llm_call(llm, prompt)
-            data = _parse_json_response(response)
-            if data and "classifications" in data:
-                classifications = _validate_classifications(data["classifications"])
-                if classifications:
-                    attributed = sum(1 for c in classifications if c["attributed"] == 1)
-                    score = attributed / len(classifications)
-                    return {"evidence_recall_llm": round(score, 4)}
         except Exception as e:
-            logger.warning("Evidence recall evaluation failed: %s", e)
-
-        return {"evidence_recall_llm": 0.0}
+            logger.warning("Evidence recall LLM call failed: %s", e)
+            return {"evidence_recall_llm": None}
+        data = _parse_json_response(response)
+        if not data or "classifications" not in data:
+            logger.warning("Evidence recall: failed to parse classifications")
+            return {"evidence_recall_llm": None}
+        classifications = _validate_classifications(data["classifications"])
+        if not classifications:
+            logger.warning("Evidence recall: no valid classifications")
+            return {"evidence_recall_llm": None}
+        attributed = sum(1 for c in classifications if c["attributed"] == 1)
+        score = attributed / len(classifications)
+        return {"evidence_recall_llm": round(score, 4)}

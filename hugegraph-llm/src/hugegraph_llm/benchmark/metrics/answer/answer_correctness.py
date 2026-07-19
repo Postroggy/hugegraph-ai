@@ -142,36 +142,38 @@ class AnswerCorrectness(BaseMetric):
             reference_statements=ref_text,
         )
 
-        tp, fp, fn = 0, 0, 0
         try:
             response = retry_llm_call(llm, prompt)
-            data = _parse_json_response(response)
-            if data:
-                tp = len(data.get("tp", []))
-                fp = len(data.get("fp", []))
-                fn = len(data.get("fn", []))
-                # Completeness check: each candidate stmt must be in TP or FP,
-                # each reference stmt must be in TP or FN. If the LLM skipped
-                # any, conservatively treat unclassified candidates as FP and
-                # unclassified references as FN to avoid inflating F1.
-                classified_cand = tp + fp
-                if classified_cand < len(cand_stmts):
-                    missing_cand = len(cand_stmts) - classified_cand
-                    logger.warning(
-                        "LLM skipped %d candidate statement(s); treating as FP",
-                        missing_cand,
-                    )
-                    fp += missing_cand
-                classified_ref = tp + fn
-                if classified_ref < len(ref_stmts):
-                    missing_ref = len(ref_stmts) - classified_ref
-                    logger.warning(
-                        "LLM skipped %d reference statement(s); treating as FN",
-                        missing_ref,
-                    )
-                    fn += missing_ref
         except Exception as e:
-            logger.warning("Correctness classification failed: %s", e)
+            logger.warning("Correctness classification LLM call failed: %s", e)
+            return {"answer_correctness": None, "answer_tp": None, "answer_fp": None, "answer_fn": None}
+        data = _parse_json_response(response)
+        if not data:
+            logger.warning("Correctness classification: failed to parse response")
+            return {"answer_correctness": None, "answer_tp": None, "answer_fp": None, "answer_fn": None}
+        tp = len(data.get("tp", []))
+        fp = len(data.get("fp", []))
+        fn = len(data.get("fn", []))
+        # Completeness check: each candidate stmt must be in TP or FP,
+        # each reference stmt must be in TP or FN. If the LLM skipped
+        # any, conservatively treat unclassified candidates as FP and
+        # unclassified references as FN to avoid inflating F1.
+        classified_cand = tp + fp
+        if classified_cand < len(cand_stmts):
+            missing_cand = len(cand_stmts) - classified_cand
+            logger.warning(
+                "LLM skipped %d candidate statement(s); treating as FP",
+                missing_cand,
+            )
+            fp += missing_cand
+        classified_ref = tp + fn
+        if classified_ref < len(ref_stmts):
+            missing_ref = len(ref_stmts) - classified_ref
+            logger.warning(
+                "LLM skipped %d reference statement(s); treating as FN",
+                missing_ref,
+            )
+            fn += missing_ref
 
         # F1 = 2*TP / (2*TP + FP + FN)
         denominator = 2 * tp + fp + fn

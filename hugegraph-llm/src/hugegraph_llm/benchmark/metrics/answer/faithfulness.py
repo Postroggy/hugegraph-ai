@@ -56,8 +56,12 @@ def _decompose_statements(llm: Any, question: str, answer: str, language: str = 
     return [answer] if answer else []
 
 
-def _verify_statements(llm: Any, context: str, statements: List[str], language: str = "en") -> int:
-    """Verify statements against context, return count of supported ones."""
+def _verify_statements(llm: Any, context: str, statements: List[str], language: str = "en") -> Optional[int]:
+    """Verify statements against context, return count of supported ones.
+
+    Returns ``None`` when the LLM call fails or the response can't be parsed,
+    so the caller surfaces a missing score rather than a misleading 0.
+    """
     if not statements:
         return 0
 
@@ -65,18 +69,19 @@ def _verify_statements(llm: Any, context: str, statements: List[str], language: 
     prompt = get_prompt("NLI_STATEMENT_PROMPT", language).format(context=context, statements=stmt_text)
     try:
         response = retry_llm_call(llm, prompt)
-        data = _parse_json_response(response)
-        if data and isinstance(data.get("verdicts"), list):
-            supported = sum(
-                1
-                for v in data["verdicts"]
-                if isinstance(v, dict) and str(v.get("verdict", "")).strip().lower() in ("yes", "1")
-            )
-            return supported
     except Exception as e:
-        logger.warning("NLI verification failed: %s", e)
-
-    return 0
+        logger.warning("NLI verification LLM call failed: %s", e)
+        return None
+    data = _parse_json_response(response)
+    if not data or not isinstance(data.get("verdicts"), list):
+        logger.warning("NLI verification: failed to parse verdicts")
+        return None
+    supported = sum(
+        1
+        for v in data["verdicts"]
+        if isinstance(v, dict) and str(v.get("verdict", "")).strip().lower() in ("yes", "1")
+    )
+    return supported
 
 
 @MetricRegistry.register
@@ -133,6 +138,8 @@ class Faithfulness(BaseMetric):
             return {"faithfulness": None}
 
         supported = _verify_statements(llm, combined_context, statements, language)
+        if supported is None:
+            return {"faithfulness": None}
         score = supported / len(statements)
 
         return {"faithfulness": round(score, 4)}

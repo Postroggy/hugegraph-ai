@@ -129,14 +129,16 @@ def _compute_extraction_faithfulness(
         items="\n".join(items),
     )
 
-    verdicts: List[Dict[str, Any]] = []
     try:
         response = retry_llm_call(llm, prompt)
-        data = _parse_json_response(response)
-        if data and isinstance(data.get("verdicts"), list):
-            verdicts = data["verdicts"]
     except Exception as e:
-        logger.warning("Extraction faithfulness judgment failed: %s", e)
+        logger.warning("Extraction faithfulness LLM call failed: %s", e)
+        return {"extraction_faithfulness": None}
+    data = _parse_json_response(response)
+    if not data or not isinstance(data.get("verdicts"), list):
+        logger.warning("Extraction faithfulness: failed to parse verdicts from LLM response")
+        return {"extraction_faithfulness": None}
+    verdicts: List[Dict[str, Any]] = data["verdicts"]
 
     total = len(items)
     # 按 idx 对齐 verdicts（prompt 要求每个 verdict 带 idx）。LLM 可能漏/多/重复

@@ -39,14 +39,19 @@ from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 logger = logging.getLogger(__name__)
 
 
-def _score_context(llm: Any, question: str, ctx: str, language: str = "en") -> float:
-    """Score a single context for relevance (0-2 scale)."""
+def _score_context(llm: Any, question: str, ctx: str, language: str = "en") -> Optional[float]:
+    """Score a single context for relevance (0-2 scale).
+
+    Returns ``None`` when both retry attempts fail, so the caller can tell
+    "LLM unreachable" apart from "LLM scored 0".
+    """
     prompt = get_prompt("CONTEXT_RELEVANCE_PROMPT", language).format(
         question=question,
         context=str(ctx),
     )
 
     scores: List[int] = []
+    successes = 0
     for _ in range(2):
         try:
             response = retry_llm_call(llm, prompt)
@@ -55,10 +60,13 @@ def _score_context(llm: Any, question: str, ctx: str, language: str = "en") -> f
                 scores.append(max(0, min(2, int(data["score"]))))
             else:
                 scores.append(0)
+            successes += 1
         except Exception as e:
             logger.warning("Context relevancy scoring failed: %s", e)
             scores.append(0)
 
+    if successes == 0:
+        return None
     return sum(scores) / len(scores)
 
 
@@ -103,13 +111,24 @@ class ContextRelevancy(BaseMetric):
             return {"context_relevancy": 0.0}
 
         scores: List[float] = []
+        judged = 0
         for ctx in contexts:
             ctx_str = str(ctx)
             # Exact-match guard: context == question is degenerate (GraphRAG-Benchmark)
             if ctx_str.strip() == question.strip() or ctx_str.strip() in question:
                 scores.append(0)
+                judged += 1
                 continue
-            scores.append(_score_context(llm, question, ctx_str, language))
+            s = _score_context(llm, question, ctx_str, language)
+            if s is None:
+                scores.append(0)  # 该 context 两次重试都失败，保守 0
+            else:
+                scores.append(s)
+                judged += 1
+
+        # 全部 context 都未拿到有效结果（exact-match 不算 LLM 失败）→ 不计分
+        if judged == 0:
+            return {"context_relevancy": None}
 
         # Normalize: mean score / 2 to get 0-1 range
         mean_score = sum(scores) / len(scores)
