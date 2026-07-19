@@ -21,7 +21,10 @@ import argparse
 import json
 import logging
 import sys
+from enum import Enum
 from typing import Any, Dict, List, Optional
+
+import typer
 
 # Ensure all metrics are registered before any runner is used. Importing the
 # package runs metrics/__init__.py, which imports every metric subpackage so
@@ -474,94 +477,109 @@ def _select_metrics(metrics: List[str], mode_key: str) -> List[str]:
 
 
 # ---------------------------------------------------------------------------
-# Argument parser
+# Typer app
 # ---------------------------------------------------------------------------
 
+# ``str``-mixin Enums so each value is also a plain ``str``. The handlers below
+# compare with ``==`` and do dict lookups (``_DEFAULT_METRICS.get(mode, ...)``),
+# both of which keep working because a ``str, Enum`` member hashes/compares as
+# its value. This gives the Typer layer typed choices without touching handler
+# logic — the command functions just repackage the values into the same
+# ``argparse.Namespace`` shape ``_handle_run`` / ``_handle_compare`` expect.
+class _Mode(str, Enum):
+    extraction = "extraction"
+    retrieval = "retrieval"
+    answer = "answer"
+    # ``all`` would shadow the builtin; the trailing underscore is name-only,
+    # the CLI value (and what users type) stays ``all``.
+    all_ = "all"
 
-def build_parser() -> argparse.ArgumentParser:
-    """Build the argument parser for the benchmark CLI."""
-    parser = argparse.ArgumentParser(
-        prog="hugegraph-benchmark",
-        description="HugeGraph-LLM Benchmark Evaluation Tool",
-    )
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    # --- run ---
-    run_parser = subparsers.add_parser("run", help="Run a benchmark evaluation")
-    run_parser.add_argument(
-        "--mode",
-        choices=["extraction", "retrieval", "answer", "all"],
-        default="extraction",
-        help="Evaluation mode (default: extraction)",
-    )
-    run_parser.add_argument("--data", required=True, help="Path to the JSON data file")
-    run_parser.add_argument(
-        "--metrics",
-        default=None,
-        help="Comma-separated metric names (default: auto-select by mode)",
-    )
-    run_parser.add_argument(
-        "--language",
-        choices=["en", "zh"],
-        default="en",
-        help="Language for normalization (default: en)",
-    )
-    run_parser.add_argument(
-        "--smoke",
-        action="store_true",
-        help="Only evaluate the first 5 samples",
-    )
-    run_parser.add_argument(
-        "--samples",
-        default=None,
-        help="Comma-separated sample IDs to evaluate",
-    )
-    run_parser.add_argument(
-        "--save-baseline",
-        default=None,
-        help="File path to save the result as a baseline",
-    )
-    run_parser.add_argument(
-        "--output",
-        default=None,
-        help="Output file path (default: stdout)",
-    )
-    run_parser.add_argument(
-        "--format",
-        choices=["json", "markdown"],
-        default="markdown",
-        help="Report format (default: markdown)",
-    )
-    run_parser.add_argument(
-        "--offline",
-        action="store_true",
-        help="Offline mode (skip LLM-dependent metrics)",
-    )
-    run_parser.add_argument(
-        "--max-workers",
-        type=int,
-        default=20,
-        help="Sample-level concurrency for LLM-Judge metrics (default: 20; use 1 for serial/debug)",
-    )
+class _Language(str, Enum):
+    en = "en"
+    zh = "zh"
 
-    # --- compare ---
-    cmp_parser = subparsers.add_parser("compare", help="Compare baseline and candidate results")
-    cmp_parser.add_argument("--baseline", required=True, help="Path to baseline JSON file")
-    cmp_parser.add_argument("--candidate", required=True, help="Path to candidate JSON file")
-    cmp_parser.add_argument("--reference", default=None, help="Optional reference JSON file")
-    cmp_parser.add_argument(
-        "--format",
-        choices=["json", "markdown"],
-        default="markdown",
-        help="Report format (default: markdown)",
-    )
-    cmp_parser.add_argument(
-        "--output",
-        default=None,
-        help="Output file path (default: stdout)",
-    )
 
-    return parser
+class _Format(str, Enum):
+    json = "json"
+    markdown = "markdown"
+
+
+app = typer.Typer(
+    name="hugegraph-benchmark",
+    help="HugeGraph-LLM Benchmark Evaluation Tool",
+    no_args_is_help=False,
+    add_completion=False,
+)
+
+
+@app.callback(invoke_without_command=True)
+def _callback(ctx: typer.Context) -> None:
+    """Print help and exit(1) when no sub-command is given.
+
+    Mirrors the old argparse path where ``parser.print_help(); sys.exit(1)``
+    ran when no command matched. Typer's default would exit(2) with a
+    "Missing command" error instead.
+    """
+    if ctx.invoked_subcommand is None:
+        typer.echo(ctx.get_help())
+        raise typer.Exit(code=1)
+
+
+@app.command("run")
+def run(
+    mode: _Mode = typer.Option(_Mode.extraction, "--mode", help="Evaluation mode (default: extraction)"),
+    data: str = typer.Option(..., "--data", help="Path to the JSON data file"),
+    metrics: Optional[str] = typer.Option(
+        None, "--metrics", help="Comma-separated metric names (default: auto-select by mode)"
+    ),
+    language: _Language = typer.Option(_Language.en, "--language", help="Language for normalization (default: en)"),
+    smoke: bool = typer.Option(False, "--smoke", help="Only evaluate the first 5 samples"),
+    samples: Optional[str] = typer.Option(None, "--samples", help="Comma-separated sample IDs to evaluate"),
+    save_baseline: Optional[str] = typer.Option(
+        None, "--save-baseline", help="File path to save the result as a baseline"
+    ),
+    output: Optional[str] = typer.Option(None, "--output", help="Output file path (default: stdout)"),
+    fmt: _Format = typer.Option(_Format.markdown, "--format", help="Report format (default: markdown)"),
+    offline: bool = typer.Option(False, "--offline", help="Offline mode (skip LLM-dependent metrics)"),
+    max_workers: int = typer.Option(
+        20, "--max-workers", help="Sample-level concurrency for LLM-Judge metrics (default: 20; use 1 for serial/debug)"
+    ),
+) -> None:
+    """Run a benchmark evaluation."""
+    args = argparse.Namespace(
+        mode=mode,
+        data=data,
+        metrics=metrics,
+        language=language,
+        smoke=smoke,
+        samples=samples,
+        save_baseline=save_baseline,
+        output=output,
+        format=fmt,
+        offline=offline,
+        max_workers=max_workers,
+    )
+    _handle_run(args)
+
+
+@app.command("compare")
+def compare(
+    baseline: str = typer.Option(..., "--baseline", help="Path to baseline JSON file"),
+    candidate: str = typer.Option(..., "--candidate", help="Path to candidate JSON file"),
+    reference: Optional[str] = typer.Option(None, "--reference", help="Optional reference JSON file"),
+    fmt: _Format = typer.Option(_Format.markdown, "--format", help="Report format (default: markdown)"),
+    output: Optional[str] = typer.Option(None, "--output", help="Output file path (default: stdout)"),
+) -> None:
+    """Compare baseline and candidate results."""
+    args = argparse.Namespace(
+        baseline=baseline,
+        candidate=candidate,
+        reference=reference,
+        format=fmt,
+        output=output,
+    )
+    _handle_compare(args)
 
 
 def main(argv: Optional[List[str]] = None) -> None:
@@ -576,16 +594,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         force=True,
     )
 
-    parser = build_parser()
-    args = parser.parse_args(argv)
-
-    if args.command == "run":
-        _handle_run(args)
-    elif args.command == "compare":
-        _handle_compare(args)
-    else:
-        parser.print_help()
-        sys.exit(1)
+    app(args=argv)
 
 
 if __name__ == "__main__":

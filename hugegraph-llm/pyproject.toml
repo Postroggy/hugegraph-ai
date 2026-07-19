@@ -35,6 +35,7 @@ dependencies = [
     "setuptools",
     "urllib3",
     "rich",
+    "typer",
 
     # Data processing dependencies
     "numpy",
