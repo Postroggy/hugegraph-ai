@@ -33,6 +33,12 @@ import hugegraph_llm.benchmark.metrics  # noqa: F401
 from hugegraph_llm.benchmark.baseline.compare import BaselineComparator
 from hugegraph_llm.benchmark.llm_judge.client import create_judge_llm
 from hugegraph_llm.benchmark.baseline.store import BaselineStore
+from hugegraph_llm.benchmark.metric_catalog import (
+    default_metrics,
+    llm_metrics,
+    metrics_not_in_mode,
+    unknown_metrics,
+)
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 from hugegraph_llm.benchmark.models.result import BenchmarkResult
 from hugegraph_llm.benchmark.reporters.markdown_reporter import MarkdownReporter
@@ -42,39 +48,10 @@ from hugegraph_llm.benchmark.runners.retrieval_runner import RetrievalRunner
 
 logger = logging.getLogger(__name__)
 
-# Default metric sets per mode (used when --metrics is omitted). Kept
-# offline-friendly — LLM-Judge metrics are intentionally NOT in the defaults.
-_DEFAULT_METRICS = {
-    "extraction": ["entity_f1", "triple_f1", "schema_validity"],
-    "retrieval": ["recall_at_k", "hit_at_k", "mrr"],
-    "answer": ["token_f1", "exact_match", "rouge_l"],
-}
-
-# Full allow-list per mode: the defaults above plus opt-in metrics valid for
-# that mode. ``--metrics`` selections are kept iff they belong to the target
-# mode's list, so ``--mode answer --metrics coverage`` works while
-# ``--mode retrieval --metrics entity_f1`` is rejected as a mode mismatch.
-_MODE_ALLOWED_METRICS = {
-    "extraction": _DEFAULT_METRICS["extraction"]
-    + [
-        "property_f1",
-        "semantic_entity_f1",
-        "semantic_triple_f1",
-        "extraction_faithfulness",
-    ],
-    "retrieval": _DEFAULT_METRICS["retrieval"]
-    + [
-        "context_precision",
-        "context_relevancy",
-        "evidence_recall_llm",
-    ],
-    "answer": _DEFAULT_METRICS["answer"]
-    + [
-        "answer_correctness",
-        "faithfulness",
-        "coverage",
-    ],
-}
+# Per-mode metric sets (defaults / allow-list) and shared validation helpers
+# (unknown / llm / mode-mismatch) live in metric_catalog — the single source
+# of truth shared with operator.py. The wrappers below adapt them to the CLI's
+# print+SystemExit error style.
 
 
 def _resolve_metrics(mode: str, user_metrics: Optional[str]) -> List[str]:
@@ -83,24 +60,10 @@ def _resolve_metrics(mode: str, user_metrics: Optional[str]) -> List[str]:
         return [m.strip() for m in user_metrics.split(",") if m.strip()]
     if mode == "all":
         all_metrics: List[str] = []
-        for v in _DEFAULT_METRICS.values():
-            all_metrics.extend(v)
+        for m in ("extraction", "retrieval", "answer"):
+            all_metrics.extend(default_metrics(m))
         return all_metrics
-    return list(_DEFAULT_METRICS.get(mode, []))
-
-
-def _unknown_metrics(metrics: List[str]) -> List[str]:
-    available = set(MetricRegistry.list_metrics())
-    return [metric for metric in metrics if metric not in available]
-
-
-def _llm_metrics(metrics: List[str]) -> List[str]:
-    selected = []
-    for metric in metrics:
-        metric_class = MetricRegistry.get(metric)
-        if metric_class is not None and metric_class.requires_llm:
-            selected.append(metric)
-    return selected
+    return default_metrics(mode)
 
 
 def _warn_deprecated_metrics(metrics: List[str]) -> None:
@@ -182,12 +145,12 @@ def _handle_run(args: argparse.Namespace) -> None:
 
     mode: str = args.mode
     metrics = _resolve_metrics(mode, args.metrics)
-    unknown = _unknown_metrics(metrics)
+    unknown = unknown_metrics(metrics)
     if unknown:
         print(f"Error: unknown metric(s): {', '.join(unknown)}", file=sys.stderr)
         raise SystemExit(2)
     _warn_deprecated_metrics(metrics)
-    llm_metric_names = _llm_metrics(metrics)
+    llm_metric_names = llm_metrics(metrics)
     if args.offline and llm_metric_names:
         print(
             "Error: LLM metric(s) require online mode and an LLM client: " + ", ".join(llm_metric_names),
@@ -230,7 +193,7 @@ def _handle_run(args: argparse.Namespace) -> None:
 
     def metrics_for_mode(mode_key: str) -> List[str]:
         if mode == "all" and not args.metrics:
-            return list(_DEFAULT_METRICS[mode_key])
+            return default_metrics(mode_key)
         return _select_metrics(metrics, mode_key)
 
     # Dispatch each resolved mode to its runner directly. The operator
@@ -462,11 +425,11 @@ def _select_metrics(metrics: List[str], mode_key: str) -> List[str]:
     """Validate and return metrics valid for *mode_key*.
 
     Defaults (used when --metrics is omitted) stay offline-friendly; the full
-    allow-list in ``_MODE_ALLOWED_METRICS`` also covers opt-in LLM-Judge
-    metrics so they can be selected explicitly, e.g. ``--metrics coverage``.
+    allow-list in ``metric_catalog.allowed_metrics`` also covers opt-in
+    LLM-Judge metrics so they can be selected explicitly, e.g. ``--metrics
+    coverage``.
     """
-    allowed = set(_MODE_ALLOWED_METRICS.get(mode_key, []))
-    invalid = [m for m in metrics if m not in allowed]
+    invalid = metrics_not_in_mode(metrics, mode_key)
     if invalid:
         print(
             f"Error: metric(s) not valid for {mode_key} mode: {', '.join(invalid)}",
@@ -481,8 +444,8 @@ def _select_metrics(metrics: List[str], mode_key: str) -> List[str]:
 # ---------------------------------------------------------------------------
 
 # ``str``-mixin Enums so each value is also a plain ``str``. The handlers below
-# compare with ``==`` and do dict lookups (``_DEFAULT_METRICS.get(mode, ...)``),
-# both of which keep working because a ``str, Enum`` member hashes/compares as
+# compare with ``==`` and do dict lookups, both of which keep working because
+# a ``str, Enum`` member hashes/compares as
 # its value. This gives the Typer layer typed choices without touching handler
 # logic — the command functions just repackage the values into the same
 # ``argparse.Namespace`` shape ``_handle_run`` / ``_handle_compare`` expect.
