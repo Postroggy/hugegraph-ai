@@ -47,18 +47,12 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from hugegraph_llm.benchmark.llm_judge.client import create_judge_llm
+from hugegraph_llm.benchmark.metric_catalog import allowed_metrics, llm_metrics, unknown_metrics
 from hugegraph_llm.benchmark.metrics.dimensions import get_dimension
-from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 from hugegraph_llm.benchmark.models.result import BenchmarkResult
 from hugegraph_llm.benchmark.runners.extraction_runner import ExtractionRunner
 
 logger = logging.getLogger(__name__)
-
-# Full default metric set for extraction, run when ``metrics`` is omitted.
-_EXTRACTION_METRICS = [
-    "entity_f1", "triple_f1", "schema_validity", "property_f1",
-    "semantic_entity_f1", "semantic_triple_f1", "extraction_faithfulness",
-]
 
 # dimensions.py keys answer-quality metrics under the "generation" domain; the
 # operator surfaces them as the "answer" dimension (matching AnswerRunner).
@@ -193,7 +187,7 @@ def evaluate(
         dimension: evaluation dimension. Only ``"extraction"`` is supported
             for now.
         metrics: explicit metric list. When omitted, the full extraction
-            suite (``_EXTRACTION_METRICS``) is run.
+            suite (``metric_catalog.allowed_metrics("extraction")``) is run.
         language: language code for normalization / LLM-Judge prompts
             (``"en"`` or ``"zh"``).
         max_workers: sample-level concurrency for LLM-Judge metrics.
@@ -229,8 +223,8 @@ def evaluate(
                 f"`metrics` belong to dimension {inferred!r}, not 'extraction'"
             )
     else:
-        selected = list(_EXTRACTION_METRICS)
-    unknown = [m for m in selected if MetricRegistry.get(m) is None]
+        selected = allowed_metrics("extraction")
+    unknown = unknown_metrics(selected)
     if unknown:
         raise ValueError(f"unknown metric(s): {', '.join(unknown)}")
 
@@ -245,7 +239,7 @@ def evaluate(
     llm_meta: Dict[str, Any] = {}
     if llm is None:
         llm, llm_meta = create_judge_llm()
-    llm_metric_names = [m for m in selected if MetricRegistry.get(m).requires_llm]
+    llm_metric_names = llm_metrics(selected)
     if llm is None and llm_metric_names:
         raise ValueError(
             f"LLM-Judge metric(s) {llm_metric_names} require a configured LLM "
