@@ -40,6 +40,11 @@ collapsed. This module is neutral: it returns lists and never prints or calls
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
+# Importing the metrics package runs metrics/__init__.py, which imports every
+# metric subpackage so each metric self-registers via MetricRegistry. Done here
+# (not in cli.py / operator.py) so any catalog caller gets metrics registered
+# automatically — unknown_metrics / llm_metrics query MetricRegistry.
+import hugegraph_llm.benchmark.metrics  # noqa: F401
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 
 

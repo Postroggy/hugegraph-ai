@@ -26,10 +26,6 @@ from typing import Any, Dict, List, Optional
 
 import typer
 
-# Ensure all metrics are registered before any runner is used. Importing the
-# package runs metrics/__init__.py, which imports every metric subpackage so
-# each metric self-registers via MetricRegistry.
-import hugegraph_llm.benchmark.metrics  # noqa: F401
 from hugegraph_llm.benchmark.baseline.compare import BaselineComparator
 from hugegraph_llm.benchmark.llm_judge.client import create_judge_llm
 from hugegraph_llm.benchmark.baseline.store import BaselineStore
