@@ -23,39 +23,58 @@ cleaning that was previously duplicated across metric files.
 
 import json
 import logging
+import random
 import re
 import time
 from typing import Any, Dict, List, Optional
 
+from hugegraph_llm.benchmark.llm_judge.exceptions import LLMPermanentError
+
 logger = logging.getLogger(__name__)
 
-# GraphRAG-Benchmark standard: max 2 retries with exponential backoff
-_MAX_RETRIES = 2
+# Max retries with exponential backoff + jitter. Tuned for LLM-Judge workloads
+# where 429/5xx/timeout are common and worth waiting through; permanent errors
+# (auth, 4xx) short-circuit before any retry.
+_MAX_RETRIES = 4
 _RETRY_BASE_DELAY = 1.0
+_RETRY_MAX_DELAY = 30.0
 
 
 def retry_llm_call(llm: Any, prompt: str, max_retries: int = _MAX_RETRIES) -> str:
-    """Call LLM with retry on transient failures (GraphRAG-Benchmark pattern).
+    """Call LLM with retry on transient failures.
+
+    Only transient errors are retried: ``LLMTransientError`` raised by the
+    client, plus any unexpected exception treated conservatively as retryable.
+    ``LLMPermanentError`` (auth / bad request / 4xx) short-circuits immediately
+    so attempts and quota aren't wasted on failures retrying won't fix.
+
+    Backoff is exponential with jitter to avoid thundering-herd retries when
+    many concurrent samples hit a rate limit at once.
 
     Args:
-        llm: LLM client with a ``generate(prompt=...)`` method.
+        llm: LLM client with a ``generate(prompt=...)`` method that raises
+            ``LLMTransientError`` / ``LLMPermanentError``.
         prompt: The prompt text to send.
-        max_retries: Maximum retry attempts (default 2, matching GraphRAG-Bench).
+        max_retries: Maximum retry attempts (default 4).
 
     Returns:
         LLM response text.
 
     Raises:
-        RuntimeError: If all attempts (including retries) fail.
+        LLMPermanentError: Immediately on permanent failures.
+        RuntimeError: If all attempts (including retries) fail on transient errors.
     """
     last_error = None
     for attempt in range(max_retries + 1):
         try:
             return llm.generate(prompt=prompt)
+        except LLMPermanentError:
+            raise
         except Exception as e:
             last_error = e
             if attempt < max_retries:
-                delay = _RETRY_BASE_DELAY * (2**attempt)
+                delay = min(_RETRY_MAX_DELAY, _RETRY_BASE_DELAY * (2**attempt))
+                delay += random.random()  # jitter to spread concurrent retries
                 logger.warning(
                     "LLM call failed (attempt %d/%d), retrying in %.1fs: %s",
                     attempt + 1,

@@ -29,8 +29,50 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from openai import OpenAI
+from openai import (
+    APIConnectionError,
+    APIStatusError,
+    APITimeoutError,
+    AuthenticationError,
+    BadRequestError,
+    ConflictError,
+    InternalServerError,
+    NotFoundError,
+    PermissionDeniedError,
+    RateLimitError,
+    UnprocessableEntityError,
+)
+
+from hugegraph_llm.benchmark.llm_judge.exceptions import (
+    LLMPermanentError,
+    LLMTransientError,
+)
 
 logger = logging.getLogger(__name__)
+
+# openai SDK exception → abstract LLM error mapping. Done here — the only place
+# that imports openai — so retry_llm_call / metrics stay provider-agnostic: a
+# provider swap only touches this file.
+_PERMANENT_OPENAI_ERRORS = (
+    AuthenticationError,
+    BadRequestError,
+    NotFoundError,
+    PermissionDeniedError,
+    ConflictError,
+    UnprocessableEntityError,
+)
+_TRANSIENT_OPENAI_ERRORS = (
+    RateLimitError,
+    APITimeoutError,
+    APIConnectionError,
+    InternalServerError,
+)
+
+# Default extra_body for JudgeLLM: disable reasoning/thinking on judge calls.
+# Some gateway models (e.g. DeepSeek-V4-Pro) emit reasoning_content by default,
+# which wastes tokens and can leak into parsed output. Override per-instance
+# (JudgeLLM(extra_body=...)) or per-call (generate(extra_body=...)).
+_DEFAULT_EXTRA_BODY = {"thinking": {"type": "disabled"}}
 
 
 class JudgeLLM:
@@ -40,34 +82,61 @@ class JudgeLLM:
     Any object with a compatible ``generate(prompt=...) -> str`` method can
     substitute for this class — the metrics only depend on that contract
     (see ``hugegraph_llm.benchmark.llm_judge.judge_utils.retry_llm_call``).
+
+    Provider exceptions raised by the underlying client are translated to
+    abstract ``LLMTransientError`` / ``LLMPermanentError`` here, so retry logic
+    and metrics stay provider-agnostic.
     """
 
-    def __init__(self, client: Any, model: str, temperature: float, seed: int, max_tokens: int) -> None:
+    def __init__(
+        self,
+        client: Any,
+        model: str,
+        temperature: float,
+        seed: int,
+        max_tokens: int,
+        extra_body: Optional[Dict[str, Any]] = None,
+    ) -> None:
         self._c = client
         self._m = model
         self._temperature = temperature
         self._seed = seed
         self._max_tokens = max_tokens
+        # Provider-specific params (e.g. disabling thinking/reasoning). Defaults
+        # to disabling thinking; override per-instance or per-call.
+        self._extra_body = extra_body if extra_body is not None else dict(_DEFAULT_EXTRA_BODY)
 
     def generate(self, prompt: str = "", messages: Optional[List[Dict[str, str]]] = None, **kw: Any) -> str:
         msgs = messages or [{"role": "user", "content": prompt}]
-        response = self._c.chat.completions.create(
-            model=self._m,
-            messages=msgs,
-            temperature=self._temperature,
-            max_tokens=kw.get("max_tokens", self._max_tokens),
-            seed=self._seed,
-            # Disable reasoning/thinking for judge calls. Some chat models on
-            # the gateway (e.g. DeepSeek-V4-Pro) emit a reasoning_content by
-            # default, which wastes tokens and can leak into the parsed
-            # output. Provider-specific field; verified to disable thinking
-            # on DeepSeek-V4-Pro.
-            extra_body={"thinking": {"type": "disabled"}},
-        )
+        # Per-call extra_body overrides the instance default.
+        extra_body = kw.get("extra_body", self._extra_body)
+        create_kwargs: Dict[str, Any] = {
+            "model": self._m,
+            "messages": msgs,
+            "temperature": self._temperature,
+            "max_tokens": kw.get("max_tokens", self._max_tokens),
+            "seed": self._seed,
+        }
+        if extra_body:
+            create_kwargs["extra_body"] = extra_body
+        try:
+            response = self._c.chat.completions.create(**create_kwargs)
+        except _PERMANENT_OPENAI_ERRORS as e:
+            raise LLMPermanentError(f"LLM call failed (permanent {type(e).__name__}): {e}") from e
+        except _TRANSIENT_OPENAI_ERRORS as e:
+            raise LLMTransientError(f"LLM call failed (transient {type(e).__name__}): {e}") from e
+        except APIStatusError as e:
+            # APIStatusError covers 4xx/5xx not matched above; classify by code.
+            if e.status_code >= 500:
+                raise LLMTransientError(f"LLM call failed (HTTP {e.status_code}): {e}") from e
+            raise LLMPermanentError(f"LLM call failed (HTTP {e.status_code}): {e}") from e
         return response.choices[0].message.content
 
 
-def create_judge_llm(settings: Optional[Any] = None) -> Tuple[Optional[JudgeLLM], Dict[str, Any]]:
+def create_judge_llm(
+    settings: Optional[Any] = None,
+    extra_body: Optional[Dict[str, Any]] = None,
+) -> Tuple[Optional[JudgeLLM], Dict[str, Any]]:
     """Create the LLM-Judge client + reproducibility metadata.
 
     Reads endpoint / model / credentials from ``llm_settings`` (project
@@ -118,7 +187,7 @@ def create_judge_llm(settings: Optional[Any] = None) -> Tuple[Optional[JudgeLLM]
         seed = 42
         max_tokens = int(getattr(cfg, "openai_chat_tokens", None) or 2048)
 
-        llm = JudgeLLM(client, model, temperature, seed, max_tokens)
+        llm = JudgeLLM(client, model, temperature, seed, max_tokens, extra_body=extra_body)
         logger.info(
             "LLM client: OpenAI-compatible, model=%s, temperature=%s, seed=%s",
             model,
