@@ -65,6 +65,8 @@ Answer: {answer}
 
 Output format: Return a JSON object with a single key "statements" \
 containing a list of strings, each being an atomic statement.
+Return one statement for each atomic claim, preserve the statement text, and \
+return no additional keys or text.
 """
 
 _STATEMENT_DECOMPOSE_PROMPT_ZH = """\
@@ -92,6 +94,7 @@ _STATEMENT_DECOMPOSE_PROMPT_ZH = """\
 
 输出格式：返回一个 JSON 对象，包含唯一的键 "statements"，其值为字符串列表，\
 每个字符串是一个原子陈述。
+每个原子主张都必须对应一个陈述，保留陈述原文，不得返回其他键或文本。
 """
 
 # ============================================================================
@@ -101,9 +104,8 @@ _STATEMENT_DECOMPOSE_PROMPT_ZH = """\
 
 NLI_STATEMENT_PROMPT = """\
 Your task is to judge the faithfulness of a series of statements based on \
-a given context. For each statement you must return verdict as 1 if the \
-statement can be directly inferred based on the context or 0 if the statement \
-can not be directly inferred based on the context.
+a given context. For each statement return verdict "Yes" if it can be \
+directly inferred from the context, or "No" if it cannot be directly inferred.
 
 Example 1:
 Context: John is a student at XYZ University. He is pursuing a degree in \
@@ -152,12 +154,14 @@ Statements:
 Output format: Return a JSON object with a single key "verdicts" \
 containing a list of objects, each with "statement" (str), \
 "reason" (str), and "verdict" ("Yes" or "No") keys.
+Return exactly one verdict object for each numbered statement, preserve the \
+statement text, and return no additional keys or text.
 """
 
 _NLI_STATEMENT_PROMPT_ZH = """\
 你的任务是根据给定的上下文，判断一系列陈述是否忠实于上下文。对于每个陈述，\
-如果它能从上下文中直接推断出来，请返回 verdict 为 1；如果不能直接从上下文中\
-推断出来，请返回 verdict 为 0。
+如果它能从上下文中直接推断出来，请返回 verdict 为 "Yes"；如果不能直接从上下文中\
+推断出来，请返回 verdict 为 "No"。
 
 示例 1：
 上下文：约翰是 XYZ 大学的学生，正在攻读计算机科学学位。本学期他选修了多门课程，\
@@ -202,6 +206,7 @@ _NLI_STATEMENT_PROMPT_ZH = """\
 
 输出格式：返回一个 JSON 对象，包含唯一的键 "verdicts"，其值为对象列表，\
 每个对象包含 "statement"（字符串）、"reason"（字符串）和 "verdict"（"Yes" 或 "No"）。
+必须为每条编号陈述恰好返回一个 verdict 对象，保留陈述原文，不得返回其他键或文本。
 """
 
 # ============================================================================
@@ -248,7 +253,9 @@ Output:
   "fn": [
     {{"statement": "The sun is powered by nuclear fusion, where hydrogen atoms fuse to form helium.", "reason": "Not mentioned in answer."}},
     {{"statement": "This fusion process releases a tremendous amount of energy.", "reason": "Not mentioned in answer."}},
-    {{"statement": "The energy provides heat and light, essential for life on Earth.", "reason": "Only light is mentioned in answer."}}
+    {{"statement": "The energy provides heat and light, essential for life on Earth.", "reason": "Only light is mentioned in answer."}},
+    {{"statement": "The sun's light plays a critical role in Earth's climate system.", "reason": "Not mentioned in answer."}},
+    {{"statement": "Sunlight helps drive weather and ocean currents.", "reason": "Not mentioned in answer."}}
   ]
 }}
 
@@ -278,6 +285,8 @@ Reference Answer Statements:
 
 Output format: Return a JSON object with keys "tp", "fp", "fn", each \
 containing a list of objects with "statement" and "reason" fields.
+Every candidate/reference statement must appear exactly once in the required \
+buckets, and the response must contain no additional keys or text.
 """
 
 _CORRECTNESS_CLASSIFY_PROMPT_ZH = """\
@@ -312,7 +321,9 @@ _CORRECTNESS_CLASSIFY_PROMPT_ZH = """\
   "fn": [
     {{"statement": "太阳的能量来源是核聚变，氢原子聚变形成氦。", "reason": "候选答案未提及。"}},
     {{"statement": "这一聚变过程释放出巨大的能量。", "reason": "候选答案未提及。"}},
-    {{"statement": "这些能量提供热和光，对地球上的生命至关重要。", "reason": "候选答案只提到了光。"}}
+    {{"statement": "这些能量提供热和光，对地球上的生命至关重要。", "reason": "候选答案只提到了光。"}},
+    {{"statement": "太阳的光在地球气候系统中起着关键作用。", "reason": "候选答案未提及。"}},
+    {{"statement": "阳光有助于驱动天气和洋流。", "reason": "候选答案未提及。"}}
   ]
 }}
 
@@ -342,6 +353,7 @@ _CORRECTNESS_CLASSIFY_PROMPT_ZH = """\
 
 输出格式：返回一个 JSON 对象，包含键 "tp"、"fp"、"fn"，每个键对应的值为\
 包含 "statement" 和 "reason" 字段的对象列表。
+每条候选/标准答案陈述必须恰好出现在规定的分类中一次，且不得返回其他键或文本。
 """
 
 # ============================================================================
@@ -381,6 +393,7 @@ Context Passage: {context}
 
 Output format: Return a JSON object with a single key "verdict" \
 containing "Yes" or "No".
+Return no explanation, additional keys, or additional text.
 """
 
 _CONTEXT_PRECISION_PROMPT_ZH = """\
@@ -409,6 +422,7 @@ _CONTEXT_PRECISION_PROMPT_ZH = """\
 上下文段落：{context}
 
 输出格式：返回一个 JSON 对象，包含唯一的键 "verdict"，其值为 "Yes" 或 "No"。
+不得返回解释、其他键或其他文本。
 """
 
 # ============================================================================
@@ -436,6 +450,7 @@ score 2.
 Output format:
 You must output strictly in JSON format with a single key "score".
 No explanation, no additional text.
+The score must be exactly one of 0, 1, or 2.
 
 Example:
 Question: What is the capital of France?
@@ -462,6 +477,7 @@ _CONTEXT_RELEVANCE_PROMPT_ZH = """\
 输出格式：
 你必须严格以 JSON 格式输出，只包含一个键 "score"。
 不要解释，不要附加任何其他文本。
+得分必须严格为 0、1 或 2 之一。
 
 示例：
 问题：法国的首都是哪里？
@@ -489,6 +505,8 @@ item should include:
 - "statement": the exact evidence string
 - "reason": a brief explanation (1 sentence)
 - "attributed": 1 if the evidence can be attributed to the Context, otherwise 0
+Return exactly one classification for each evidence item, preserve each \
+statement verbatim, and return no additional keys or text.
 
 ### Example
 Input:
@@ -527,6 +545,7 @@ _EVIDENCE_RECALL_PROMPT_ZH = """\
 - "statement"：证据的原文
 - "reason"：简要说明（一句话）
 - "attributed"：如果证据可以从上下文中得到归因则为 1，否则为 0
+必须为每条证据恰好返回一个分类，保留每条证据原文，不得返回其他键或文本。
 
 ### 示例
 输入：
@@ -586,6 +605,7 @@ Reference Answer: {reference}
 
 Output format: Return a JSON object with a single key "facts" containing a list \
 of strings, each being an independently verifiable factual statement.
+Return no additional keys or text.
 """
 
 _COVERAGE_FACT_EXTRACT_PROMPT_ZH = """\
@@ -610,6 +630,7 @@ _COVERAGE_FACT_EXTRACT_PROMPT_ZH = """\
 
 输出格式：返回一个 JSON 对象，包含唯一的键 "facts"，其值为字符串列表，\
 每个字符串是一个可独立验证的事实性陈述。
+不得返回其他键或文本。
 """
 
 COVERAGE_CHECK_PROMPT = """\
@@ -618,6 +639,7 @@ i.e. can be inferred or is directly supported — by the response. \
 Respond ONLY with a JSON object containing a "classifications" list. Each item \
 must have:
 - "statement": the exact fact from the reference
+- "reason": a brief explanation of why the fact is or is not covered
 - "attributed": 1 if the fact is covered by the response, 0 otherwise
 
 Example:
@@ -628,8 +650,8 @@ Reference Facts: ["Seasonal changes result from Earth's axial tilt", \
 Output:
 {{
   "classifications": [
-    {{"statement": "Seasonal changes result from Earth's axial tilt", "attributed": 1}},
-    {{"statement": "The axial tilt causes different hemispheres to receive varying sunlight", "attributed": 0}}
+    {{"statement": "Seasonal changes result from Earth's axial tilt", "reason": "The response attributes seasons to the tilted axis.", "attributed": 1}},
+    {{"statement": "The axial tilt causes different hemispheres to receive varying sunlight", "reason": "This detail is not stated in the response.", "attributed": 0}}
   ]
 }}
 
@@ -639,6 +661,8 @@ Response: {response}
 Reference Facts: {facts}
 
 Output format: Return a JSON object with a single key "classifications".
+Return exactly one classification for each reference fact, preserve each \
+statement verbatim, and return no additional keys or text.
 """
 
 _COVERAGE_CHECK_PROMPT_ZH = """\
@@ -646,6 +670,7 @@ _COVERAGE_CHECK_PROMPT_ZH = """\
 被回答直接支持）。请只返回一个包含 "classifications" 列表的 JSON 对象，\
 列表中每一项包含：
 - "statement"：参考答案中的原事实
+- "reason"：说明该事实是否被回答覆盖的简要理由
 - "attributed"：若该事实被回答覆盖则为 1，否则为 0
 
 示例：
@@ -655,8 +680,8 @@ _COVERAGE_CHECK_PROMPT_ZH = """\
 输出：
 {{
   "classifications": [
-    {{"statement": "季节变化由地球自转轴倾斜造成", "attributed": 1}},
-    {{"statement": "自转轴倾斜导致不同半球接收到不同的阳光", "attributed": 0}}
+    {{"statement": "季节变化由地球自转轴倾斜造成", "reason": "回答说明季节由倾斜的自转轴造成。", "attributed": 1}},
+    {{"statement": "自转轴倾斜导致不同半球接收到不同的阳光", "reason": "回答未提及不同半球接收阳光的细节。", "attributed": 0}}
   ]
 }}
 
@@ -666,6 +691,7 @@ _COVERAGE_CHECK_PROMPT_ZH = """\
 参考事实：{facts}
 
 输出格式：返回一个 JSON 对象，包含唯一的键 "classifications"。
+必须为每条参考事实恰好返回一个分类，保留事实原文，不得返回其他键或文本。
 """
 
 
@@ -694,8 +720,12 @@ Matching rules:
   (e.g., gold "Status(ABS故障警告灯)" ↔ candidate "Status(ABS系统故障指示)").
 
 Return a JSON object with:
-- "matches": list of [candidate_index, gold_index] pairs (0-indexed)
+- "matches": list of objects with "candidate_index" and "gold_index" (0-indexed)
 - "reasoning": brief explanation (1-2 sentences)
+Indices must refer to the lists in the actual input, and each index may appear \
+at most once. Return no additional keys or text.
+The "reasoning" value is required even when no matches are found. Return no \
+additional keys or text.
 
 IMPORTANT: Do NOT match by position order. Candidate [0] does NOT necessarily match \
 gold [0]. You MUST compare semantics across all pairs, regardless of index.
@@ -715,7 +745,7 @@ Candidate entities (indexed):
 
 Expected JSON:
 {{
-  "matches": [[1, 0], [2, 1]],
+  "matches": [{{"candidate_index": 1, "gold_index": 0}}, {{"candidate_index": 2, "gold_index": 1}}],
   "reasoning": "Candidate[1] ABS系统故障指示灯 → gold[0] ABS故障警告灯 (semantic equivalent); \
 candidate[2] 制动液检查/更换 → gold[1] 制动液 (core concept match). \
 Candidate[0] 轮胎气压 does NOT match gold[3] 轮胎 — type is Component but 气压 adds unsupported detail making it a different entity. \
@@ -748,8 +778,10 @@ _ENTITY_SEMANTIC_MATCH_PROMPT_ZH = """\
 - 特殊情况：标准答案中的告警灯 Component 在候选答案中以 Status 表达，若语义信号一致可匹配。
 
 返回 JSON 对象，包含：
-- "matches"：[[候选索引, 标准答案索引], ...] 列表（从0开始索引）
+- "matches"：包含 "candidate_index" 和 "gold_index" 的对象列表（从0开始索引）
 - "reasoning"：简要说明（1-2 句中文）
+索引必须对应实际输入列表，且每个索引最多出现一次。不得返回其他键或文本。
+即使没有匹配项也必须填写非空的 "reasoning"，不得返回其他键或文本。
 
 重要提示：不要按索引顺序匹配。候选 [0] 不一定匹配标准答案 [0]。必须跨所有组合进行语义比对，索引顺序不代表匹配关系。
 
@@ -768,7 +800,7 @@ _ENTITY_SEMANTIC_MATCH_PROMPT_ZH = """\
 
 期望输出：
 {{
-  "matches": [[1, 0], [2, 1]],
+  "matches": [{{"candidate_index": 1, "gold_index": 0}}, {{"candidate_index": 2, "gold_index": 1}}],
   "reasoning": "候选[1] ABS系统故障指示灯→标准答案[0] ABS故障警告灯（语义等价）；候选[2] 制动液检查/更换→标准答案[1] 制动液（核心概念匹配）。候选[0] 轮胎气压与标准答案[3] 轮胎不匹配——虽然类型同为 Component，但「气压」引入了额外细节，属于不同实体。候选[3] 发动机排量_1.5T与标准答案[2] 最高车速_205km/h不匹配——规格含义完全不同。"
 }}
 
@@ -812,8 +844,12 @@ Matching rules:
 - Partial matches (e.g., source OK but relation wrong) are NOT counted as matches.
 
 Return a JSON object with:
-- "matches": list of [candidate_index, gold_index] pairs (0-indexed)
+- "matches": list of objects with "candidate_index" and "gold_index" (0-indexed)
 - "reasoning": brief explanation (1-2 sentences)
+Indices must refer to the lists in the actual input, and each index may appear \
+at most once. Return no additional keys or text.
+The "reasoning" value is required even when no matches are found. Return no \
+additional keys or text.
 
 IMPORTANT: Do NOT match by position order. Candidate [0] does NOT necessarily match \
 gold [0]. You MUST compare semantics across all pairs, regardless of index.
@@ -831,7 +867,7 @@ Candidate triples:
 
 Expected JSON:
 {{
-  "matches": [[0, 1], [2, 2]],
+  "matches": [{{"candidate_index": 0, "gold_index": 1}}, {{"candidate_index": 2, "gold_index": 2}}],
   "reasoning": "Candidate[0] 组合仪表显示屏--HAS_STATUS-->ABS故障指示灯点亮 matches gold[1] (source and target semantically equivalent, same relation). \
 Candidate[2] 发动机总成--HAS_COMPONENT-->火花塞 matches gold[2] (发动机总成≈发动机, exact relation and target). \
 Candidate[1] 制动液--HAS_COMPONENT-->制动系统 does NOT match gold[0] 制动液--HAS_SPEC-->容量:1L — relation and target are completely different factual claims."
@@ -866,8 +902,10 @@ _TRIPLE_SEMANTIC_MATCH_PROMPT_ZH = """\
 - 部分匹配（如源实体匹配但关系错误）不算命中。
 
 返回 JSON 对象，包含：
-- "matches"：[[候选索引, 标准答案索引], ...] 列表（从0开始索引）
+- "matches"：包含 "candidate_index" 和 "gold_index" 的对象列表（从0开始索引）
 - "reasoning"：简要说明（1-2 句中文）
+索引必须对应实际输入列表，且每个索引最多出现一次。不得返回其他键或文本。
+即使没有匹配项也必须填写非空的 "reasoning"，不得返回其他键或文本。
 
 重要提示：不要按索引顺序匹配。候选 [0] 不一定匹配标准答案 [0]。必须跨所有组合进行语义比对，索引顺序不代表匹配关系。
 
@@ -884,7 +922,7 @@ _TRIPLE_SEMANTIC_MATCH_PROMPT_ZH = """\
 
 期望输出：
 {{
-  "matches": [[0, 1], [2, 2]],
+  "matches": [{{"candidate_index": 0, "gold_index": 1}}, {{"candidate_index": 2, "gold_index": 2}}],
   "reasoning": "候选[0] 组合仪表显示屏→ABS故障指示灯点亮与标准答案[1]语义等价（源实体和目标均等价，关系一致）；候选[2] 发动机总成→火花塞与标准答案[2]匹配（发动机总成≈发动机，关系和目标完全一致）；候选[1] 制动液--HAS_COMPONENT-->制动系统与标准答案[0] 制动液--HAS_SPEC-->容量:1L不匹配——关系类型和目标实体完全不同，事实声明不同。"
 }}
 
@@ -914,17 +952,19 @@ For each vertex (entity) or edge (triple), determine if the factual claim it
 makes can be directly or reasonably inferred from the input text.
 
 Rules:
-- verdict = 1: The item's factual content is clearly stated in or can be
+- verdict = "Yes": The item's factual content is clearly stated in or can be
   directly inferred from the input text.
-- verdict = 0: The item's factual content is NOT supported by the input text
+- verdict = "No": The item's factual content is NOT supported by the input text
   (hallucination, over-extrapolation, or contradiction).
 - If the input text mentions a concept but the item adds unsupported detail,
-  verdict = 0.
+  verdict = "No".
 - If the input text is empty or contains no relevant information for the item,
-  verdict = 0.
+  verdict = "No".
 
 Return a JSON object with:
-- "verdicts": list of {{"idx": <int>, "verdict": <0 or 1>, "reason": "<brief>"}}
+- "verdicts": list of {{"idx": <int>, "verdict": "Yes" or "No", "reason": "<brief>"}}
+Return exactly one verdict for every extraction item, using the displayed \
+0-based index exactly once. Return no additional keys or text.
 
 Example:
 Input text:
@@ -939,10 +979,10 @@ Extraction items:
 Expected JSON:
 {{
   "verdicts": [
-    {{"idx": 0, "verdict": 1, "reason": "Text mentions 'DOT 4 brake fluid', supporting the Component 制动液."}},
-    {{"idx": 1, "verdict": 1, "reason": "Text states 'Replace brake fluid every 2 years', supporting the 2-year cycle."}},
-    {{"idx": 2, "verdict": 0, "reason": "Text specifies DOT 4, but item claims DOT 5 — contradicts the source."}},
-    {{"idx": 3, "verdict": 0, "reason": "Text never mentions engine oil — this is a hallucination."}}
+    {{"idx": 0, "verdict": "Yes", "reason": "Text mentions 'DOT 4 brake fluid', supporting the Component 制动液."}},
+    {{"idx": 1, "verdict": "Yes", "reason": "Text states 'Replace brake fluid every 2 years', supporting the 2-year cycle."}},
+    {{"idx": 2, "verdict": "No", "reason": "Text specifies DOT 4, but item claims DOT 5 — contradicts the source."}},
+    {{"idx": 3, "verdict": "No", "reason": "Text never mentions engine oil — this is a hallucination."}}
   ]
 }}
 
@@ -963,13 +1003,15 @@ _EXTRACTION_FAITHFULNESS_PROMPT_ZH = """\
 对每个顶点（实体）或边（三元组），判断它所声称的事实是否可以从输入文本中直接或合理推断出来。
 
 规则：
-- verdict = 1：该项的事实内容在输入文本中有明确陈述或可直接推断。
-- verdict = 0：该项的事实内容在输入文本中没有依据（幻觉、过度推断或矛盾）。
-- 若输入文本提到了某个概念但该项添加了无依据的细节，verdict = 0。
-- 若输入文本为空或不含该项相关信息，verdict = 0。
+- verdict = "Yes"：该项的事实内容在输入文本中有明确陈述或可直接推断。
+- verdict = "No"：该项的事实内容在输入文本中没有依据（幻觉、过度推断或矛盾）。
+- 若输入文本提到了某个概念但该项添加了无依据的细节，verdict = "No"。
+- 若输入文本为空或不含该项相关信息，verdict = "No"。
 
 返回 JSON 对象，包含：
-- "verdicts"：[{{"idx": <编号>, "verdict": <0或1>, "reason": "<简要原因>"}}, ...] 列表
+- "verdicts"：[{{"idx": <编号>, "verdict": "Yes" 或 "No", "reason": "<简要原因>"}}, ...] 列表
+必须为每个抽取项恰好返回一个 verdict，使用展示的从 0 开始索引且每个索引只出现一次，\
+不得返回其他键或文本。
 
 示例：
 输入文本：
@@ -984,10 +1026,10 @@ _EXTRACTION_FAITHFULNESS_PROMPT_ZH = """\
 期望输出：
 {{
   "verdicts": [
-    {{"idx": 0, "verdict": 1, "reason": "文中提到'DOT 4 制动液'，支持 Component 制动液。"}},
-    {{"idx": 1, "verdict": 1, "reason": "文中说'每2年更换制动液'，支持2年更换周期。"}},
-    {{"idx": 2, "verdict": 0, "reason": "文中的是DOT 4，该项声称DOT 5，与原文矛盾。"}},
-    {{"idx": 3, "verdict": 0, "reason": "文中从未提及发动机机油，属于幻觉。"}}
+    {{"idx": 0, "verdict": "Yes", "reason": "文中提到'DOT 4 制动液'，支持 Component 制动液。"}},
+    {{"idx": 1, "verdict": "Yes", "reason": "文中说'每2年更换制动液'，支持2年更换周期。"}},
+    {{"idx": 2, "verdict": "No", "reason": "文中的是DOT 4，该项声称DOT 5，与原文矛盾。"}},
+    {{"idx": 3, "verdict": "No", "reason": "文中从未提及发动机机油，属于幻觉。"}}
   ]
 }}
 

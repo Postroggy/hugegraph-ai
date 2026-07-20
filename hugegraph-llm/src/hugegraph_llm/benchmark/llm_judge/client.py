@@ -28,7 +28,6 @@ the operator leaves logging to the host process and never reconfigures it.
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from openai import OpenAI
 from openai import (
     APIConnectionError,
     APIStatusError,
@@ -38,6 +37,7 @@ from openai import (
     ConflictError,
     InternalServerError,
     NotFoundError,
+    OpenAI,
     PermissionDeniedError,
     RateLimitError,
     UnprocessableEntityError,

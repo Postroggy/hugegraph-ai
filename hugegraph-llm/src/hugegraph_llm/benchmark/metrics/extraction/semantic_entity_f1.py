@@ -26,7 +26,6 @@ Reference: car33 评分规则.md §4.1 (entity normalization rules),
 ragas ContextEntityRecall (LLM entity extraction pattern).
 """
 
-import json
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -38,6 +37,12 @@ from hugegraph_llm.benchmark.metrics.base import BaseMetric
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 
 logger = logging.getLogger(__name__)
+
+
+def _entity_bucket(label: Any) -> str:
+    """Group labels that the prompt explicitly allows to cross-match."""
+    normalized = str(label or "")
+    return "warning_light" if normalized in {"Component", "Status"} else normalized
 
 def _format_vertex(idx: int, vertex: Dict[str, Any]) -> str:
     """Format a single vertex as an indexed prompt line (``idx`` is the global index)."""
@@ -83,9 +88,9 @@ def _compute_semantic_entity_pr_f1(
     gold_by_label: Dict[str, List[tuple]] = {}
     cand_by_label: Dict[str, List[tuple]] = {}
     for i, v in enumerate(reference):
-        gold_by_label.setdefault(str(v.get("label", "")), []).append((i, v))
+        gold_by_label.setdefault(_entity_bucket(v.get("label")), []).append((i, v))
     for i, v in enumerate(prediction):
-        cand_by_label.setdefault(str(v.get("label", "")), []).append((i, v))
+        cand_by_label.setdefault(_entity_bucket(v.get("label")), []).append((i, v))
 
     matches: List[List[int]] = []
     attempts = 0
@@ -110,9 +115,9 @@ def _compute_semantic_entity_pr_f1(
             )
             if data and isinstance(data.get("matches"), list):
                 for m in data["matches"]:
-                    if not (isinstance(m, list) and len(m) == 2):
+                    if not isinstance(m, dict):
                         continue
-                    lc, lg = m[0], m[1]
+                    lc, lg = m.get("candidate_index"), m.get("gold_index")
                     if (
                         isinstance(lc, int)
                         and isinstance(lg, int)
@@ -120,6 +125,8 @@ def _compute_semantic_entity_pr_f1(
                         and 0 <= lg < len(gold_bucket)
                     ):
                         matches.append([cand_bucket[lc][0], gold_bucket[lg][0]])
+            elif data is not None:
+                logger.warning("Semantic entity matching: invalid matches payload for label=%s", label)
             successes += 1
         except Exception as e:
             logger.warning("Semantic entity matching failed for label=%s: %s", label, e)

@@ -25,6 +25,7 @@ Reference: RAGAS faithfulness implementation.
 """
 
 import logging
+from collections import Counter
 from typing import Any, Dict, List, Optional
 
 from hugegraph_llm.benchmark.llm_judge.judge_utils import clean_contexts, retry_llm_call
@@ -74,11 +75,23 @@ def _verify_statements(llm: Any, context: str, statements: List[str], language: 
     if not data or not isinstance(data.get("verdicts"), list):
         logger.warning("NLI verification: failed to parse verdicts")
         return None
-    supported = sum(
-        1
-        for v in data["verdicts"]
-        if isinstance(v, dict) and str(v.get("verdict", "")).strip().lower() in ("yes", "1")
-    )
+    verdicts = data["verdicts"]
+    if len(verdicts) != len(statements):
+        logger.warning(
+            "NLI verification: expected %d verdicts, got %d",
+            len(statements),
+            len(verdicts),
+        )
+        return None
+    if any(
+        not isinstance(verdict, dict)
+        or verdict.get("verdict") not in {"Yes", "No"}
+        or not str(verdict.get("reason", "")).strip()
+        for verdict in verdicts
+    ) or Counter(verdict.get("statement") for verdict in verdicts) != Counter(statements):
+        logger.warning("NLI verification: verdict statements do not match input")
+        return None
+    supported = sum(1 for verdict in verdicts if verdict.get("verdict") == "Yes")
     return supported
 
 

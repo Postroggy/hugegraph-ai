@@ -26,75 +26,105 @@ Strict-mode constraints (all fields required, ``additionalProperties: false``)
 are satisfied automatically — no Optional fields, no extra properties.
 """
 
-from typing import List
+from typing import Annotated, List, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 
 
-class FaithfulnessVerdict(BaseModel):
+class JudgeSchema(BaseModel):
+    """Strict base model shared by all LLM-Judge outputs."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+BinaryFlag = Literal[0, 1]
+BinaryVerdict = Literal["Yes", "No"]
+RelevancyScore = Literal[0, 1, 2]
+NonEmptyText = Annotated[str, Field(min_length=1)]
+
+
+class MatchPair(JudgeSchema):
+    """One candidate-to-gold match with explicit list indices."""
+
+    candidate_index: NonNegativeInt = Field(description="0-based candidate index")
+    gold_index: NonNegativeInt = Field(description="0-based gold/reference index")
+
+
+class ClassifiedStatement(JudgeSchema):
+    """A statement assigned to a correctness bucket."""
+
+    statement: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
+
+
+class FaithfulnessVerdict(JudgeSchema):
     """One item's faithfulness verdict from extraction_faithfulness."""
 
-    idx: int
-    verdict: int  # 1 = faithful, 0 = unfaithful
+    idx: NonNegativeInt = Field(description="0-based extraction item index")
+    verdict: BinaryVerdict = Field(description="Yes when faithful, otherwise No")
+    reason: str = Field(min_length=1, description="Brief support or contradiction rationale")
 
 
-class FaithfulnessResult(BaseModel):
+class FaithfulnessResult(JudgeSchema):
     verdicts: List[FaithfulnessVerdict]
 
 
-class MatchResult(BaseModel):
-    """semantic_entity_f1 / semantic_triple_f1: pairs of [candidate_idx, gold_idx]."""
+class MatchResult(JudgeSchema):
+    """Semantic entity/triple matches with explicit candidate and gold indices."""
 
-    matches: List[List[int]]
-
-
-class ContextPrecisionResult(BaseModel):
-    verdict: str  # "yes" or "no"
+    matches: List[MatchPair]
+    reasoning: str = Field(min_length=1, description="Brief explanation of matching decisions")
 
 
-class ContextRelevancyResult(BaseModel):
-    score: int  # 0, 1, or 2
+class ContextPrecisionResult(JudgeSchema):
+    verdict: BinaryVerdict
 
 
-class AttributedItem(BaseModel):
-    """One fact/statement with an attribution flag."""
-
-    statement: str
-    attributed: int  # 0 or 1
+class ContextRelevancyResult(JudgeSchema):
+    score: RelevancyScore
 
 
-class ClassificationResult(BaseModel):
+class AttributedItem(JudgeSchema):
+    """One fact/statement with an attribution flag and rationale."""
+
+    statement: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
+    attributed: BinaryFlag
+
+
+class ClassificationResult(JudgeSchema):
     """evidence_recall_llm / coverage check: per-item attribution list."""
 
     classifications: List[AttributedItem]
 
 
-class CorrectnessResult(BaseModel):
+class CorrectnessResult(JudgeSchema):
     """answer_correctness: TP / FP / FN statement lists."""
 
-    tp: List[str]
-    fp: List[str]
-    fn: List[str]
+    tp: List[ClassifiedStatement]
+    fp: List[ClassifiedStatement]
+    fn: List[ClassifiedStatement]
 
 
-class StatementListResult(BaseModel):
+class StatementListResult(JudgeSchema):
     """faithfulness decompose: atomic statements."""
 
-    statements: List[str]
+    statements: List[NonEmptyText]
 
 
-class FactsResult(BaseModel):
+class FactsResult(JudgeSchema):
     """coverage fact extract: atomic facts from the reference answer."""
 
-    facts: List[str]
+    facts: List[NonEmptyText]
 
 
-class NLIVerdict(BaseModel):
+class NLIVerdict(JudgeSchema):
     """faithfulness NLI verify: one statement + yes/no entailment."""
 
-    statement: str
-    verdict: str  # "yes" or "no"
+    statement: str = Field(min_length=1)
+    reason: str = Field(min_length=1, description="Brief context-based rationale")
+    verdict: BinaryVerdict
 
 
-class NLIVerdictsResult(BaseModel):
+class NLIVerdictsResult(JudgeSchema):
     verdicts: List[NLIVerdict]

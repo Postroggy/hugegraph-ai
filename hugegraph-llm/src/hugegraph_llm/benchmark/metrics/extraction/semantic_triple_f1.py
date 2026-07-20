@@ -39,6 +39,12 @@ from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 
 logger = logging.getLogger(__name__)
 
+
+def _relation_bucket(label: Any) -> str:
+    """Group relation labels that the prompt explicitly treats as synonyms."""
+    normalized = str(label or "")
+    return "status" if normalized in {"HAS_STATUS", "SYSTEM_HAS_STATUS"} else normalized
+
 def _format_triple(idx: int, edge: Dict[str, Any]) -> str:
     """Format a single edge as an indexed triple prompt line (``idx`` is the local bucket index)."""
     out_v = str(_edge_out(edge) or "?")
@@ -77,9 +83,9 @@ def _compute_semantic_triple_pr_f1(
     gold_by_label: Dict[str, List[tuple]] = {}
     cand_by_label: Dict[str, List[tuple]] = {}
     for i, e in enumerate(reference):
-        gold_by_label.setdefault(str(e.get("label", "")), []).append((i, e))
+        gold_by_label.setdefault(_relation_bucket(e.get("label")), []).append((i, e))
     for i, e in enumerate(prediction):
-        cand_by_label.setdefault(str(e.get("label", "")), []).append((i, e))
+        cand_by_label.setdefault(_relation_bucket(e.get("label")), []).append((i, e))
 
     matches: List[List[int]] = []
     attempts = 0
@@ -101,9 +107,9 @@ def _compute_semantic_triple_pr_f1(
             )
             if data and isinstance(data.get("matches"), list):
                 for m in data["matches"]:
-                    if not (isinstance(m, list) and len(m) == 2):
+                    if not isinstance(m, dict):
                         continue
-                    lc, lg = m[0], m[1]
+                    lc, lg = m.get("candidate_index"), m.get("gold_index")
                     if (
                         isinstance(lc, int)
                         and isinstance(lg, int)
@@ -111,6 +117,8 @@ def _compute_semantic_triple_pr_f1(
                         and 0 <= lg < len(gold_bucket)
                     ):
                         matches.append([cand_bucket[lc][0], gold_bucket[lg][0]])
+            elif data is not None:
+                logger.warning("Semantic triple matching: invalid matches payload for label=%s", label)
             successes += 1
         except Exception as e:
             logger.warning("Semantic triple matching failed for label=%s: %s", label, e)

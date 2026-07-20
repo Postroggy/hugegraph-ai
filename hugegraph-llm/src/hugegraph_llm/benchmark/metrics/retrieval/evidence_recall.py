@@ -24,6 +24,7 @@ Reference: GraphRAG-Bench evidence_recall.py
 """
 
 import logging
+from collections import Counter
 from typing import Any, Dict, List, Optional
 
 from hugegraph_llm.benchmark.llm_judge.judge_utils import retry_llm_call
@@ -40,11 +41,16 @@ def _validate_classifications(classifications: List) -> List[Dict]:
     valid = []
     for item in classifications:
         try:
-            if isinstance(item, dict) and "statement" in item and "attributed" in item and item["attributed"] in {0, 1}:
+            if (
+                isinstance(item, dict)
+                and str(item.get("statement", "")).strip()
+                and str(item.get("reason", "")).strip()
+                and item.get("attributed") in {0, 1}
+            ):
                 valid.append(
                     {
-                        "statement": str(item["statement"]),
-                        "reason": str(item.get("reason", "")),
+                        "statement": str(item["statement"]).strip(),
+                        "reason": str(item["reason"]).strip(),
                         "attributed": int(item["attributed"]),
                     }
                 )
@@ -118,6 +124,18 @@ class EvidenceRecallLLM(BaseMetric):
             logger.warning("Evidence recall: failed to parse classifications")
             return {"evidence_recall_llm": None}
         classifications = _validate_classifications(data["classifications"])
+        if len(classifications) != len(gold_evidences):
+            logger.warning(
+                "Evidence recall: expected %d classifications, got %d",
+                len(gold_evidences),
+                len(classifications),
+            )
+            return {"evidence_recall_llm": None}
+        if Counter(item["statement"] for item in classifications) != Counter(
+            str(evidence).strip() for evidence in gold_evidences
+        ):
+            logger.warning("Evidence recall: classification statements do not match input")
+            return {"evidence_recall_llm": None}
         if not classifications:
             logger.warning("Evidence recall: no valid classifications")
             return {"evidence_recall_llm": None}

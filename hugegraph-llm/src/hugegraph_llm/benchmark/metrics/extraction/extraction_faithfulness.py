@@ -156,6 +156,17 @@ def _compute_extraction_faithfulness(
                 "Extraction faithfulness: verdict missing valid idx, skipped: %r", v
             )
     judged = len(verdicts_by_idx)
+    invalid_verdicts = [
+        idx
+        for idx, verdict in verdicts_by_idx.items()
+        if verdict.get("verdict") not in {"Yes", "No"}
+    ]
+    if invalid_verdicts:
+        logger.warning(
+            "Extraction faithfulness: invalid verdict for idx %s;",
+            invalid_verdicts,
+        )
+        return {"extraction_faithfulness": None}
     if judged != total:
         missing = sum(1 for idx in range(total) if idx not in verdicts_by_idx)
         out_of_range = sum(1 for idx in verdicts_by_idx if idx < 0 or idx >= total)
@@ -172,7 +183,7 @@ def _compute_extraction_faithfulness(
     faithful = sum(
         1
         for idx in range(total)
-        if verdicts_by_idx.get(idx, {}).get("verdict") in (1, "1", True)
+        if verdicts_by_idx.get(idx, {}).get("verdict") == "Yes"
     )
 
     score = faithful / total if total > 0 else 0.0

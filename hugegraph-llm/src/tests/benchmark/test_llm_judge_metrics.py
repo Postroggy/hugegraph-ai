@@ -97,7 +97,7 @@ def test_faithfulnesswithfakellm_faithfulness_with_fake_llm():
     metric = Faithfulness()
     # FakeLLM returns statement decomposition then NLI verdicts.\n        Result: faithfulness=1.0.
     fake_llm = FakeLLM(
-        [json.dumps({'statements': ['Paris is the capital of France']}), json.dumps({'verdicts': [{'verdict': 'yes'}]})]
+        [json.dumps({'statements': ['Paris is the capital of France']}), json.dumps({'verdicts': [{'statement': 'Paris is the capital of France', 'reason': 'supported', 'verdict': 'Yes'}]})]
     )
     result = metric.calculate(
         'Paris is the capital of France',
@@ -115,7 +115,7 @@ def test_answercorrectnesswithfakellm_answer_correctness_with_fake_llm():
         [
             json.dumps({'statements': ['stmt1']}),
             json.dumps({'statements': ['stmt1']}),
-            json.dumps({'tp': ['stmt1'], 'fp': [], 'fn': []}),
+            json.dumps({'tp': [{'statement': 'stmt1', 'reason': 'matched'}], 'fp': [], 'fn': []}),
         ]
     )
     result = metric.calculate(
@@ -133,7 +133,7 @@ def test_answercorrectnesswithfakellm_answer_correctness_with_fake_llm():
 def test_contextprecisionwithfakellm_context_precision_with_fake_llm():
     metric = ContextPrecision()
     # FakeLLM returns verdict='yes' for each context.\n        With 2 contexts both relevant -> AP=1.0.
-    fake_llm = FakeLLM([json.dumps({'verdict': 'yes'}), json.dumps({'verdict': 'yes'})])
+    fake_llm = FakeLLM([json.dumps({'verdict': 'Yes'}), json.dumps({'verdict': 'Yes'})])
     result = metric.calculate(
         ['Paris is the capital of France', 'France is in Europe'],
         reference='Paris',

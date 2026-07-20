@@ -57,7 +57,7 @@ class RecordingLLM:
 
 def _all_faithful(n: int) -> str:
     return json.dumps({
-        "verdicts": [{"idx": i, "verdict": 1, "reason": "supported"} for i in range(n)]
+        "verdicts": [{"idx": i, "verdict": "Yes", "reason": "supported"} for i in range(n)]
     })
 
 
@@ -157,7 +157,7 @@ def test_faithfulness_returns_zero_when_no_evidence_at_all():
     numeric score (no exception, no None), so upstream can tell it apart
     from an offline run."""
     llm = RecordingLLM(json.dumps({
-        "verdicts": [{"idx": 0, "verdict": 0, "reason": "empty text"}]
+        "verdicts": [{"idx": 0, "verdict": "No", "reason": "empty text"}]
     }))
     prediction = {
         "vertices": [{"label": "C", "name": "A"}],

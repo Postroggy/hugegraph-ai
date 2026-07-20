@@ -32,6 +32,7 @@ Reference: GraphRAG-Benchmark (ICLR'26) ``Evaluation/metrics/coverage.py``.
 
 import json
 import logging
+from collections import Counter
 from typing import Any, Dict, List, Optional
 
 from hugegraph_llm.benchmark.llm_judge.judge_utils import retry_llm_call
@@ -91,13 +92,17 @@ def _check_coverage(
         if not isinstance(item, dict):
             continue
         attr = item.get("attributed")
-        if attr in (0, 1, "0", "1"):
+        statement = str(item.get("statement", "")).strip()
+        if statement and item.get("reason") and attr in (0, 1):
             valid.append(
                 {
-                    "statement": str(item.get("statement", "")),
+                    "statement": statement,
                     "attributed": int(attr),
                 }
             )
+    if len(valid) != len(facts) or Counter(item["statement"] for item in valid) != Counter(facts):
+        logger.warning("Coverage check: classifications do not match reference facts")
+        return None
     return valid
 
 

@@ -57,7 +57,7 @@ def test_retrievalrunner_fails_fast_when_ranking_metric_missing_doc_ids(tmp_path
 def test_retrievalrunner_context_metrics_only_do_not_require_doc_ids(tmp_path):
     class _FakeLLM:
         def generate(self, prompt=None, messages=None, **kw):
-            return '{"verdict": "yes"}'
+            return '{"verdict": "Yes"}'
 
     data_path = tmp_path / "context_only.json"
     data_path.write_text(
