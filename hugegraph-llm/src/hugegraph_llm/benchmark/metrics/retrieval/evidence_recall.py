@@ -26,13 +26,10 @@ Reference: GraphRAG-Bench evidence_recall.py
 import logging
 from typing import Any, Dict, List, Optional
 
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    parse_json_response as _parse_json_response,
-)
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    retry_llm_call,
-)
+from hugegraph_llm.benchmark.llm_judge.judge_utils import retry_llm_call
+from hugegraph_llm.benchmark.llm_judge.message import Message
 from hugegraph_llm.benchmark.llm_judge.prompts import get_prompt
+from hugegraph_llm.benchmark.llm_judge.schemas import ClassificationResult
 from hugegraph_llm.benchmark.metrics.base import BaseMetric
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 
@@ -111,11 +108,12 @@ class EvidenceRecallLLM(BaseMetric):
         )
 
         try:
-            response = retry_llm_call(llm, prompt)
+            data = retry_llm_call(
+                llm, [Message(prompt)], response_format=ClassificationResult
+            )
         except Exception as e:
             logger.warning("Evidence recall LLM call failed: %s", e)
             return {"evidence_recall_llm": None}
-        data = _parse_json_response(response)
         if not data or "classifications" not in data:
             logger.warning("Evidence recall: failed to parse classifications")
             return {"evidence_recall_llm": None}

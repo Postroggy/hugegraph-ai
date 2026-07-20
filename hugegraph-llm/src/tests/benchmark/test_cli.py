@@ -259,6 +259,8 @@ def test_clihelp_run_missing_data_errors():
 def test_createllmclient_uses_fixed_judge_params():
     """_create_llm_client builds an OpenAI-compatible client with fixed temperature/seed."""
     from hugegraph_llm.benchmark.cli import _create_llm_client
+    from hugegraph_llm.benchmark.llm_judge.message import Message
+    from hugegraph_llm.benchmark.llm_judge.schemas import StatementListResult
 
     class _FakeSettings:
         openai_chat_api_key = "test-key"
@@ -266,29 +268,123 @@ def test_createllmclient_uses_fixed_judge_params():
         openai_chat_language_model = "test-model"
         openai_chat_tokens = 1024
 
+    fake_parsed = MagicMock()
+    fake_parsed.model_dump.return_value = {"statements": ["s1"]}
     fake_choice = MagicMock()
-    fake_choice.message.content = "json response"
+    fake_choice.finish_reason = "stop"
+    fake_choice.message.parsed = fake_parsed
+    fake_choice.message.refusal = None
     fake_response = MagicMock()
     fake_response.choices = [fake_choice]
 
     fake_client = MagicMock()
-    fake_client.chat.completions.create.return_value = fake_response
+    fake_client.beta.chat.completions.parse.return_value = fake_response
 
     with patch("hugegraph_llm.benchmark.llm_judge.client.OpenAI", return_value=fake_client) as mock_openai:
         llm, meta = _create_llm_client(settings=_FakeSettings())
 
     assert meta == {"model": "test-model", "temperature": 0.0, "seed": 42}
     mock_openai.assert_called_once_with(api_key="test-key", base_url="https://test.example/v1")
-    response = llm.generate(prompt="hello")
-    fake_client.chat.completions.create.assert_called_once_with(
+    result = llm.generate(
+        messages=[Message("hello")], response_format=StatementListResult
+    )
+    fake_client.beta.chat.completions.parse.assert_called_once_with(
         model="test-model",
         messages=[{"role": "user", "content": "hello"}],
         temperature=0.0,
         max_tokens=1024,
         seed=42,
+        response_format=StatementListResult,
         extra_body={"thinking": {"type": "disabled"}},
     )
-    assert response == "json response"
+    assert result == {"statements": ["s1"]}
+
+
+def _make_judge_llm(fake_client):
+    """Build a real JudgeLLM backed by a mock OpenAI client."""
+    from hugegraph_llm.benchmark.llm_judge.client import JudgeLLM
+    return JudgeLLM(fake_client, "m", 0.0, 42, 1024)
+
+
+def test_generate_refusal_raises_permanent():
+    """Model refusal → LLMPermanentError (retrying won't help)."""
+    from hugegraph_llm.benchmark.llm_judge.exceptions import LLMPermanentError
+    from hugegraph_llm.benchmark.llm_judge.message import Message
+    from hugegraph_llm.benchmark.llm_judge.schemas import StatementListResult
+
+    fake_choice = MagicMock()
+    fake_choice.finish_reason = "stop"
+    fake_choice.message.refusal = "unsafe content"
+    fake_choice.message.parsed = None
+    fake_response = MagicMock()
+    fake_response.choices = [fake_choice]
+    fake_client = MagicMock()
+    fake_client.beta.chat.completions.parse.return_value = fake_response
+
+    llm = _make_judge_llm(fake_client)
+    with pytest.raises(LLMPermanentError, match="refused"):
+        llm.generate(messages=[Message("hi")], response_format=StatementListResult)
+
+
+def test_generate_length_raises_transient():
+    """finish_reason=length (truncated) → LLMTransientError (retry may help)."""
+    from hugegraph_llm.benchmark.llm_judge.exceptions import LLMTransientError
+    from hugegraph_llm.benchmark.llm_judge.message import Message
+    from hugegraph_llm.benchmark.llm_judge.schemas import StatementListResult
+
+    fake_choice = MagicMock()
+    fake_choice.finish_reason = "length"
+    fake_response = MagicMock()
+    fake_response.choices = [fake_choice]
+    fake_client = MagicMock()
+    fake_client.beta.chat.completions.parse.return_value = fake_response
+
+    llm = _make_judge_llm(fake_client)
+    with pytest.raises(LLMTransientError, match="truncated"):
+        llm.generate(messages=[Message("hi")], response_format=StatementListResult)
+
+
+def test_generate_parsed_none_returns_none():
+    """parsed is None (no structured output) → generate returns None."""
+    from hugegraph_llm.benchmark.llm_judge.message import Message
+    from hugegraph_llm.benchmark.llm_judge.schemas import StatementListResult
+
+    fake_choice = MagicMock()
+    fake_choice.finish_reason = "stop"
+    fake_choice.message.refusal = None
+    fake_choice.message.parsed = None
+    fake_response = MagicMock()
+    fake_response.choices = [fake_choice]
+    fake_client = MagicMock()
+    fake_client.beta.chat.completions.parse.return_value = fake_response
+
+    llm = _make_judge_llm(fake_client)
+    result = llm.generate(messages=[Message("hi")], response_format=StatementListResult)
+    assert result is None
+
+
+def test_generate_passes_response_format_to_parse():
+    """response_format (pydantic model) is forwarded to beta.chat.completions.parse."""
+    from hugegraph_llm.benchmark.llm_judge.message import Message
+    from hugegraph_llm.benchmark.llm_judge.schemas import FaithfulnessResult
+
+    fake_parsed = MagicMock()
+    fake_parsed.model_dump.return_value = {"verdicts": []}
+    fake_choice = MagicMock()
+    fake_choice.finish_reason = "stop"
+    fake_choice.message.refusal = None
+    fake_choice.message.parsed = fake_parsed
+    fake_response = MagicMock()
+    fake_response.choices = [fake_choice]
+    fake_client = MagicMock()
+    fake_client.beta.chat.completions.parse.return_value = fake_response
+
+    llm = _make_judge_llm(fake_client)
+    llm.generate(messages=[Message("hi")], response_format=FaithfulnessResult)
+
+    _, kwargs = fake_client.beta.chat.completions.parse.call_args
+    assert kwargs["response_format"] is FaithfulnessResult
+    assert kwargs["messages"] == [{"role": "user", "content": "hi"}]
 
 
 def test_handlerun_attaches_llm_metadata_and_saves_baseline(tmp_path):

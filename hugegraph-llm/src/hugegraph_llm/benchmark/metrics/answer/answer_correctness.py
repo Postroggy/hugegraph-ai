@@ -30,13 +30,10 @@ import logging
 import math
 from typing import Any, Dict, List, Optional
 
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    parse_json_response as _parse_json_response,
-)
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    retry_llm_call,
-)
+from hugegraph_llm.benchmark.llm_judge.judge_utils import retry_llm_call
+from hugegraph_llm.benchmark.llm_judge.message import Message
 from hugegraph_llm.benchmark.llm_judge.prompts import get_prompt
+from hugegraph_llm.benchmark.llm_judge.schemas import CorrectnessResult, StatementListResult
 from hugegraph_llm.benchmark.metrics.base import BaseMetric
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 
@@ -50,8 +47,9 @@ def _decompose_statements(llm: Any, question: str, answer: str, language: str = 
     """Decompose an answer into atomic statements using LLM."""
     prompt = get_prompt("STATEMENT_DECOMPOSE_PROMPT", language).format(question=question, answer=answer)
     try:
-        response = retry_llm_call(llm, prompt)
-        data = _parse_json_response(response)
+        data = retry_llm_call(
+            llm, [Message(prompt)], response_format=StatementListResult
+        )
         if data and isinstance(data.get("statements"), list):
             return [str(s) for s in data["statements"] if s]
     except Exception as e:
@@ -143,11 +141,12 @@ class AnswerCorrectness(BaseMetric):
         )
 
         try:
-            response = retry_llm_call(llm, prompt)
+            data = retry_llm_call(
+                llm, [Message(prompt)], response_format=CorrectnessResult
+            )
         except Exception as e:
             logger.warning("Correctness classification LLM call failed: %s", e)
             return {"answer_correctness": None, "answer_tp": None, "answer_fp": None, "answer_fn": None}
-        data = _parse_json_response(response)
         if not data:
             logger.warning("Correctness classification: failed to parse response")
             return {"answer_correctness": None, "answer_tp": None, "answer_fp": None, "answer_fn": None}

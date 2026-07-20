@@ -48,8 +48,10 @@ class RecordingLLM:
         self._response = response
         self.prompts: List[str] = []
 
-    def generate(self, prompt: str = "", **_: Any) -> str:
-        self.prompts.append(prompt)
+    def generate(self, messages, response_format, **_: Any) -> dict:
+        self.prompts.append(messages[0].content if messages else "")
+        if isinstance(self._response, str):
+            return json.loads(self._response)
         return self._response
 
 

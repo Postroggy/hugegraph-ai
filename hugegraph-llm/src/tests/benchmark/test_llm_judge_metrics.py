@@ -38,12 +38,12 @@ class FakeLLM:
         self.responses = list(responses)
         self.call_count = 0
 
-    def generate(self, prompt='', **kwargs):
+    def generate(self, messages, response_format, **kwargs):
         if self.call_count < len(self.responses):
             resp = self.responses[self.call_count]
             self.call_count += 1
-            return resp
-        return '{}'
+            return json.loads(resp) if isinstance(resp, str) else resp
+        return {}
 
 
 def test_faithfulnessoffline_faithfulness_offline():

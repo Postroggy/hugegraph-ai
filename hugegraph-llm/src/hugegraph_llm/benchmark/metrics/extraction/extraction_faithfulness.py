@@ -28,13 +28,10 @@ ragas NLIStatementPrompt (per-statement entailment verdict).
 import logging
 from typing import Any, Dict, List, Optional
 
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    parse_json_response as _parse_json_response,
-)
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    retry_llm_call,
-)
+from hugegraph_llm.benchmark.llm_judge.judge_utils import retry_llm_call
+from hugegraph_llm.benchmark.llm_judge.message import Message
 from hugegraph_llm.benchmark.llm_judge.prompts import get_prompt
+from hugegraph_llm.benchmark.llm_judge.schemas import FaithfulnessResult
 from hugegraph_llm.benchmark.metrics.base import BaseMetric
 from hugegraph_llm.benchmark.metrics.extraction import _edge_in, _edge_out
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
@@ -130,11 +127,12 @@ def _compute_extraction_faithfulness(
     )
 
     try:
-        response = retry_llm_call(llm, prompt)
+        data = retry_llm_call(
+            llm, [Message(prompt)], response_format=FaithfulnessResult
+        )
     except Exception as e:
         logger.warning("Extraction faithfulness LLM call failed: %s", e)
         return {"extraction_faithfulness": None}
-    data = _parse_json_response(response)
     if not data or not isinstance(data.get("verdicts"), list):
         logger.warning("Extraction faithfulness: failed to parse verdicts from LLM response")
         return {"extraction_faithfulness": None}

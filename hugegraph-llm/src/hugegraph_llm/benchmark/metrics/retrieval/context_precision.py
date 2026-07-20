@@ -26,13 +26,10 @@ Reference: RAGAS context_precision.py
 import logging
 from typing import Any, Dict, List, Optional
 
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    parse_json_response as _parse_json_response,
-)
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    retry_llm_call,
-)
+from hugegraph_llm.benchmark.llm_judge.judge_utils import retry_llm_call
+from hugegraph_llm.benchmark.llm_judge.message import Message
 from hugegraph_llm.benchmark.llm_judge.prompts import get_prompt
+from hugegraph_llm.benchmark.llm_judge.schemas import ContextPrecisionResult
 from hugegraph_llm.benchmark.metrics.base import BaseMetric
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 
@@ -118,8 +115,9 @@ class ContextPrecision(BaseMetric):
             )
             attempts += 1
             try:
-                response = retry_llm_call(llm, prompt)
-                data = _parse_json_response(response)
+                data = retry_llm_call(
+                    llm, [Message(prompt)], response_format=ContextPrecisionResult
+                )
                 if data:
                     verdict = str(data.get("verdict", "")).strip().lower()
                     relevances.append(1 if verdict == "yes" else 0)

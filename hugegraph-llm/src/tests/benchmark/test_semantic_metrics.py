@@ -35,7 +35,9 @@ class FakeLLM:
     def __init__(self, response):
         self._response = response
 
-    def generate(self, prompt='', **kwargs):
+    def generate(self, messages, response_format, **kwargs):
+        if isinstance(self._response, str):
+            return json.loads(self._response)
         return self._response
 
 

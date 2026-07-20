@@ -35,21 +35,27 @@ pytestmark = pytest.mark.unit
 
 
 class _MockLLM:
-    """LLM-Judge stand-in returning empty-result JSON (no real API call).
+    """LLM-Judge stand-in returning empty-result dict (no real API call).
 
-    Returns a JSON object with every key any LLM-Judge metric might look for
+    Returns a dict with every key any LLM-Judge metric might look for
     (verdicts / matches / classifications / tp / fp / fn / score / statements /
-    facts), all empty/zero. Metrics then score 0 (e.g. empty matches → F1=0)
-    rather than None — a None would mean "LLM call failed" and the metric would
-    be excluded from overall, which hermetic tests don't want.
+    facts), all empty/zero — mirroring what ``beta.chat.completions.parse``
+    would produce from an empty structured response. Metrics then score 0
+    (e.g. empty matches → F1=0) rather than None.
     """
 
-    def generate(self, prompt="", messages=None, **kw):
-        return (
-            '{"verdicts": [], "matches": [], "classifications": [], '
-            '"tp": [], "fp": [], "fn": [], "score": 0, '
-            '"statements": [], "facts": []}'
-        )
+    def generate(self, messages, response_format, **kw):
+        return {
+            "verdicts": [],
+            "matches": [],
+            "classifications": [],
+            "tp": [],
+            "fp": [],
+            "fn": [],
+            "score": 0,
+            "statements": [],
+            "facts": [],
+        }
 
 
 class _FailingLLM:
@@ -61,7 +67,7 @@ class _FailingLLM:
         from hugegraph_llm.benchmark.llm_judge.exceptions import LLMPermanentError
         self._err = LLMPermanentError("simulated permanent failure")
 
-    def generate(self, prompt="", messages=None, **kw):
+    def generate(self, messages, response_format, **kw):
         raise self._err
 
 

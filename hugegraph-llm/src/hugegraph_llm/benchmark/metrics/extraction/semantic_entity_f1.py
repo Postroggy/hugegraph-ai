@@ -30,13 +30,10 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    parse_json_response as _parse_json_response,
-)
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    retry_llm_call,
-)
+from hugegraph_llm.benchmark.llm_judge.judge_utils import retry_llm_call
+from hugegraph_llm.benchmark.llm_judge.message import Message
 from hugegraph_llm.benchmark.llm_judge.prompts import get_prompt
+from hugegraph_llm.benchmark.llm_judge.schemas import MatchResult
 from hugegraph_llm.benchmark.metrics.base import BaseMetric
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 
@@ -108,8 +105,9 @@ def _compute_semantic_entity_pr_f1(
             candidate_entities="\n".join(cand_lines),
         )
         try:
-            response = retry_llm_call(llm, prompt)
-            data = _parse_json_response(response)
+            data = retry_llm_call(
+                llm, [Message(prompt)], response_format=MatchResult
+            )
             if data and isinstance(data.get("matches"), list):
                 for m in data["matches"]:
                     if not (isinstance(m, list) and len(m) == 2):

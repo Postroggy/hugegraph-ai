@@ -102,6 +102,8 @@ def test_real_llm_operator_extraction_full():
 def test_real_llm_cli_extraction(tmp_path):
     """CLI run → runner with the CLI-built client; stdout stays JSON-clean."""
     out = tmp_path / "cli_real.json"
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.path.join(_REPO, "hugegraph-llm", "src") + os.pathsep + env.get("PYTHONPATH", "")
     result = subprocess.run(
         [
             sys.executable, "-m", "hugegraph_llm.benchmark", "run",
@@ -113,6 +115,7 @@ def test_real_llm_cli_extraction(tmp_path):
             "--output", str(out),
         ],
         cwd=_REPO,
+        env=env,
         capture_output=True,
         text=True,
         timeout=300,

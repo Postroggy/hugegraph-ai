@@ -27,14 +27,10 @@ Reference: RAGAS faithfulness implementation.
 import logging
 from typing import Any, Dict, List, Optional
 
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    clean_contexts,
-    retry_llm_call,
-)
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    parse_json_response as _parse_json_response,
-)
+from hugegraph_llm.benchmark.llm_judge.judge_utils import clean_contexts, retry_llm_call
+from hugegraph_llm.benchmark.llm_judge.message import Message
 from hugegraph_llm.benchmark.llm_judge.prompts import get_prompt
+from hugegraph_llm.benchmark.llm_judge.schemas import NLIVerdictsResult, StatementListResult
 from hugegraph_llm.benchmark.metrics.base import BaseMetric
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 
@@ -45,8 +41,9 @@ def _decompose_statements(llm: Any, question: str, answer: str, language: str = 
     """Decompose an answer into atomic statements using LLM."""
     prompt = get_prompt("STATEMENT_DECOMPOSE_PROMPT", language).format(question=question, answer=answer)
     try:
-        response = retry_llm_call(llm, prompt)
-        data = _parse_json_response(response)
+        data = retry_llm_call(
+            llm, [Message(prompt)], response_format=StatementListResult
+        )
         if data and isinstance(data.get("statements"), list):
             return [str(s) for s in data["statements"] if s]
     except Exception as e:
@@ -68,11 +65,12 @@ def _verify_statements(llm: Any, context: str, statements: List[str], language: 
     stmt_text = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(statements))
     prompt = get_prompt("NLI_STATEMENT_PROMPT", language).format(context=context, statements=stmt_text)
     try:
-        response = retry_llm_call(llm, prompt)
+        data = retry_llm_call(
+            llm, [Message(prompt)], response_format=NLIVerdictsResult
+        )
     except Exception as e:
         logger.warning("NLI verification LLM call failed: %s", e)
         return None
-    data = _parse_json_response(response)
     if not data or not isinstance(data.get("verdicts"), list):
         logger.warning("NLI verification: failed to parse verdicts")
         return None

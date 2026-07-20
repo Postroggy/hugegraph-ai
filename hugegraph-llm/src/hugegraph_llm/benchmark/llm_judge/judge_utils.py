@@ -28,7 +28,10 @@ import re
 import time
 from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel
+
 from hugegraph_llm.benchmark.llm_judge.exceptions import LLMPermanentError
+from hugegraph_llm.benchmark.llm_judge.message import Message
 
 logger = logging.getLogger(__name__)
 
@@ -40,25 +43,32 @@ _RETRY_BASE_DELAY = 1.0
 _RETRY_MAX_DELAY = 30.0
 
 
-def retry_llm_call(llm: Any, prompt: str, max_retries: int = _MAX_RETRIES) -> str:
-    """Call LLM with retry on transient failures.
+def retry_llm_call(
+    llm: Any,
+    messages: List[Message],
+    response_format: type[BaseModel],
+    max_retries: int = _MAX_RETRIES,
+) -> Optional[dict]:
+    """Call LLM with Structured Outputs and retry on transient failures.
 
     Only transient errors are retried: ``LLMTransientError`` raised by the
     client, plus any unexpected exception treated conservatively as retryable.
-    ``LLMPermanentError`` (auth / bad request / 4xx) short-circuits immediately
-    so attempts and quota aren't wasted on failures retrying won't fix.
+    ``LLMPermanentError`` (auth / bad request / 4xx / refusal) short-circuits
+    immediately so attempts and quota aren't wasted on failures retrying won't fix.
 
     Backoff is exponential with jitter to avoid thundering-herd retries when
     many concurrent samples hit a rate limit at once.
 
     Args:
-        llm: LLM client with a ``generate(prompt=...)`` method that raises
-            ``LLMTransientError`` / ``LLMPermanentError``.
-        prompt: The prompt text to send.
+        llm: LLM client with a ``generate(messages, response_format)`` method
+            that raises ``LLMTransientError`` / ``LLMPermanentError``.
+        messages: Chat messages (system / user / assistant turns).
+        response_format: pydantic model defining the expected JSON schema.
         max_retries: Maximum retry attempts (default 4).
 
     Returns:
-        LLM response text.
+        Parsed reply as a dict (``model_dump()``), or ``None`` if the model
+        returned no parseable structured content.
 
     Raises:
         LLMPermanentError: Immediately on permanent failures.
@@ -67,7 +77,7 @@ def retry_llm_call(llm: Any, prompt: str, max_retries: int = _MAX_RETRIES) -> st
     last_error = None
     for attempt in range(max_retries + 1):
         try:
-            return llm.generate(prompt=prompt)
+            return llm.generate(messages=messages, response_format=response_format)
         except LLMPermanentError:
             raise
         except Exception as e:

@@ -34,13 +34,10 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    parse_json_response as _parse_json_response,
-)
-from hugegraph_llm.benchmark.llm_judge.judge_utils import (
-    retry_llm_call,
-)
+from hugegraph_llm.benchmark.llm_judge.judge_utils import retry_llm_call
+from hugegraph_llm.benchmark.llm_judge.message import Message
 from hugegraph_llm.benchmark.llm_judge.prompts import get_prompt
+from hugegraph_llm.benchmark.llm_judge.schemas import ClassificationResult, FactsResult
 from hugegraph_llm.benchmark.metrics.base import BaseMetric
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
 
@@ -52,8 +49,9 @@ def _extract_facts(llm: Any, question: str, reference: str, language: str = "en"
         question=question, reference=reference
     )
     try:
-        response = retry_llm_call(llm, prompt)
-        data = _parse_json_response(response)
+        data = retry_llm_call(
+            llm, [Message(prompt)], response_format=FactsResult
+        )
         if data and isinstance(data.get("facts"), list):
             return [str(f).strip() for f in data["facts"] if str(f).strip()]
     except Exception as e:
@@ -79,11 +77,12 @@ def _check_coverage(
         facts=json.dumps(facts, ensure_ascii=False),
     )
     try:
-        resp = retry_llm_call(llm, prompt)
+        data = retry_llm_call(
+            llm, [Message(prompt)], response_format=ClassificationResult
+        )
     except Exception as e:
         logger.warning("Coverage check LLM call failed: %s", e)
         return None
-    data = _parse_json_response(resp)
     if not data or not isinstance(data.get("classifications"), list):
         logger.warning("Coverage check: failed to parse classifications")
         return None

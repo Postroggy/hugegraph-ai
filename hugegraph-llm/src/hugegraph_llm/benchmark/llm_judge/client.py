@@ -42,11 +42,13 @@ from openai import (
     RateLimitError,
     UnprocessableEntityError,
 )
+from pydantic import BaseModel
 
 from hugegraph_llm.benchmark.llm_judge.exceptions import (
     LLMPermanentError,
     LLMTransientError,
 )
+from hugegraph_llm.benchmark.llm_judge.message import Message
 
 logger = logging.getLogger(__name__)
 
@@ -106,9 +108,30 @@ class JudgeLLM:
         # to disabling thinking; override per-instance or per-call.
         self._extra_body = extra_body if extra_body is not None else dict(_DEFAULT_EXTRA_BODY)
 
-    def generate(self, prompt: str = "", messages: Optional[List[Dict[str, str]]] = None, **kw: Any) -> str:
-        msgs = messages or [{"role": "user", "content": prompt}]
-        # Per-call extra_body overrides the instance default.
+    def generate(
+        self,
+        messages: List[Message],
+        response_format: type[BaseModel],
+        **kw: Any,
+    ) -> Optional[dict]:
+        """Call the LLM with Structured Outputs (``response_format`` json_schema).
+
+        Args:
+            messages: Chat messages (system / user / assistant turns).
+            response_format: pydantic model defining the expected JSON schema.
+                Passed to ``beta.chat.completions.parse`` so the reply is
+                guaranteed to adhere to the schema (strict mode).
+            **kw: Per-call overrides (e.g. ``extra_body``, ``max_tokens``).
+
+        Returns:
+            The parsed reply as a dict (``model_dump()``), or ``None`` if the
+            model returned no parseable structured content.
+
+        Raises:
+            LLMPermanentError: Auth / 4xx / refusal — retrying won't help.
+            LLMTransientError: Rate limit / timeout / 5xx / truncated (length).
+        """
+        msgs = [m.to_dict() for m in messages]
         extra_body = kw.get("extra_body", self._extra_body)
         create_kwargs: Dict[str, Any] = {
             "model": self._m,
@@ -116,11 +139,12 @@ class JudgeLLM:
             "temperature": self._temperature,
             "max_tokens": kw.get("max_tokens", self._max_tokens),
             "seed": self._seed,
+            "response_format": response_format,
         }
         if extra_body:
             create_kwargs["extra_body"] = extra_body
         try:
-            response = self._c.chat.completions.create(**create_kwargs)
+            response = self._c.beta.chat.completions.parse(**create_kwargs)
         except _PERMANENT_OPENAI_ERRORS as e:
             raise LLMPermanentError(f"LLM call failed (permanent {type(e).__name__}): {e}") from e
         except _TRANSIENT_OPENAI_ERRORS as e:
@@ -130,7 +154,20 @@ class JudgeLLM:
             if e.status_code >= 500:
                 raise LLMTransientError(f"LLM call failed (HTTP {e.status_code}): {e}") from e
             raise LLMPermanentError(f"LLM call failed (HTTP {e.status_code}): {e}") from e
-        return response.choices[0].message.content
+        choice = response.choices[0]
+        if choice.finish_reason == "length":
+            raise LLMTransientError(
+                f"LLM response truncated (finish_reason=length, "
+                f"max_tokens={create_kwargs['max_tokens']})"
+            )
+        msg = choice.message
+        refusal = getattr(msg, "refusal", None)
+        if refusal:
+            raise LLMPermanentError(f"LLM refused to answer: {refusal}")
+        if msg.parsed is None:
+            logger.warning("LLM returned no parsed structured output")
+            return None
+        return msg.parsed.model_dump()
 
 
 def create_judge_llm(
