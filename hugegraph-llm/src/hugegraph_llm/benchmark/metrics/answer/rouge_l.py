@@ -29,7 +29,7 @@ from rouge_score import rouge_scorer
 
 from hugegraph_llm.benchmark.metrics.base import BaseMetric
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
-from hugegraph_llm.benchmark.utils.normalize import tokenize
+from hugegraph_llm.benchmark.utils.text_normalize import tokenize
 
 
 def _lcs_length(x: List[str], y: List[str]) -> int:

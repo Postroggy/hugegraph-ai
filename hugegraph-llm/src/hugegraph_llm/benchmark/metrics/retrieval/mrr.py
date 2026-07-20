@@ -25,7 +25,7 @@ from typing import Any, Dict
 
 from hugegraph_llm.benchmark.metrics.base import BaseMetric
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
-from hugegraph_llm.benchmark.utils.normalize import normalize_doc_id
+from hugegraph_llm.benchmark.utils.text_normalize import normalize_doc_id
 
 
 @MetricRegistry.register

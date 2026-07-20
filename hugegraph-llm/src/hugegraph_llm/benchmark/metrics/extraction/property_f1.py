@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Tuple
 from hugegraph_llm.benchmark.metrics.base import BaseMetric
 from hugegraph_llm.benchmark.metrics.extraction import _edge_in, _edge_out, _is_edge
 from hugegraph_llm.benchmark.metrics.registry import MetricRegistry
-from hugegraph_llm.benchmark.utils.normalize import normalize_answer
+from hugegraph_llm.benchmark.utils.text_normalize import normalize_answer
 
 
 def _vertex_identity(vertex: Dict[str, Any], language: str = "en") -> Tuple[str, str]:

@@ -271,7 +271,7 @@ def test_normalize_answer_aligns_with_hipporag_sqad_standard():
 
         return white_space_fix(remove_articles(remove_punc(lower(s))))
 
-    from hugegraph_llm.benchmark.utils.normalize import normalize_answer
+    from hugegraph_llm.benchmark.utils.text_normalize import normalize_answer
 
     cases = [
         "The quick brown fox",
